@@ -1,9 +1,9 @@
 use crate::Result;
 
-use bytes::{Buf, BytesMut};
+use bytes::{ BytesMut };
 use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
-use tokio::net::{TcpListener, TcpStream};
-use tracing::{debug, error, info, instrument};
+use tokio::net::{ TcpListener, TcpStream };
+use tracing::{ error };
 
 #[derive(Debug)]
 pub struct ConnHandler {
@@ -59,7 +59,7 @@ impl Server {
                             error!(cause = ?err, "connection error");
                         }
                     });
-                }
+                },
                 Err(err) => {
                     return Err(err.into());
                 },

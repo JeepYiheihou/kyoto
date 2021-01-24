@@ -8,7 +8,7 @@ edition = "2018"
 
 [[bin]]
 name = "osaka-server"
-path = "src/main/osaka-server.rs"
+path = "src/main/osaka_server.rs"
 
 [dependencies]
 anyhow = "1.0"
