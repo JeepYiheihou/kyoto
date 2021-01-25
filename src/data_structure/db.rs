@@ -8,8 +8,8 @@ struct Entry {
 }
 
 #[derive(Debug)]
-pub struct KVHashmap {
-    hashMap: Mutex<HashMap<String, Entry>>,
+struct KVHashmap {
+    hashmap: Mutex<HashMap<String, Entry>>,
 }
 
 #[derive(Debug, Clone)]
@@ -19,9 +19,13 @@ pub struct Db {
 
 impl KVHashmap {
     pub fn new() -> Self {
-        let hashMap = Mutex::new(HashMap::new());
+        let mut h: HashMap<String, Entry> = HashMap::new();
+        let entry = Entry { data: Bytes::from_static(b"bar!") };
+        h.insert("foo!".into(), entry);
+
+        let hashmap = Mutex::new(h);
         KVHashmap {
-            hashMap: hashMap,
+            hashmap: hashmap,
         }
     }
 }
@@ -34,7 +38,7 @@ impl Db {
     }
 
     pub fn get(&self, key: &str) -> Option<Bytes> {
-        let state = self.shared.hashMap.lock().unwrap();
+        let state = self.shared.hashmap.lock().unwrap();
         state.get(key).map(|entry| entry.data.clone())
     }
 }

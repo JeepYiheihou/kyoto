@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::data_structure::db::Db;
 
 use bytes::{ BytesMut };
 use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
@@ -9,14 +10,16 @@ use tracing::{ error };
 pub struct ConnHandler {
     socket: BufWriter<TcpStream>,
     buffer: BytesMut,
+    db: Db,
 }
 
 impl ConnHandler {
-    pub fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream, db: Db) -> Self {
         let socket = BufWriter::new(stream);
         let buffer = BytesMut::with_capacity(4 * 1024);
         ConnHandler { socket: socket,
-                      buffer: buffer }
+                      buffer: buffer,
+                      db: db, }
         
     }
 
@@ -31,6 +34,9 @@ impl ConnHandler {
                 }
             };
             self.socket.write(&self.buffer[..res]).await?;
+            let val = self.db.get("foo!".into()).unwrap();
+            self.socket.write_all(&val).await?;
+            self.socket.write(b"\r\n").await?;
             self.socket.flush().await?;
             self.buffer.clear();
         }
@@ -49,11 +55,12 @@ impl Server {
 
     #[tokio::main]
     pub async fn run(&mut self) -> Result<()> {
+        let db = Db::new();
         let listener = TcpListener::bind(&format!("127.0.0.1:{}", self.port)).await?;
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
-                    let mut conn_handler = ConnHandler::new(stream);
+                    let mut conn_handler = ConnHandler::new(stream, db.clone());
                     tokio::spawn(async move {
                         if let Err(err) = conn_handler.handle().await {
                             error!(cause = ?err, "connection error");
