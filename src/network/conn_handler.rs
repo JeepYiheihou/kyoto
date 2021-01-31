@@ -55,6 +55,7 @@ impl ConnHandler {
                     self.socket.write_all(b"Error: ").await?;
                     self.socket.write_all(err.to_string().as_bytes()).await?;
                     self.socket.write(b"\r\n").await?;
+                    self.socket.flush().await?;
                 }
             }
         }
