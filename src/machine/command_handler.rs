@@ -17,41 +17,35 @@ impl CommandHandler {
     }
 
     pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Option<Bytes>> {
-        let ret = match CommandParser::parse_command(buffer) {
-            Ok(option) => {
-                match option {
-                    Some(command) => {
-                        self.execute_command(command)?
-                    },
-                    None => {
-                        Bytes::from("parsing")
-                    }
-                }
+        let ret = match CommandParser::parse_command(buffer)? {
+            Some(command) => {
+                self.execute_command(command)?
             },
-            Err(err) => {
-                println!("Error: {}\r\n", err.to_string());
-                Bytes::from("Encountered an error!")
+            None => {
+                Bytes::from("parsing")
             }
         };
         
-        match CommandParser::generate_response(ret) {
-            Ok(response) => {
-                println!("Response is: {}", String::from_utf8_lossy(&response));
-                Ok(response.into())
-            },
-            Err(err) => {
-                Err(err)
-            }
-        }
+        let response = CommandParser::generate_response(ret)?;
+        println!("Response is: {}", String::from_utf8_lossy(&response));
+        Ok(response.into())
     }
 
     pub fn execute_command(&mut self, command: Command) -> crate::Result<Bytes> {
         match command {
             Command::Get { key } => {
-                Ok(Bytes::from("Get command"))
+                match self.db.get(&key) {
+                    Some(res) => {
+                        Ok(res)
+                    },
+                    None => {
+                        Ok("Key not found.".into())
+                    }
+                }
             },
             Command::Set { key, value } => {
-                Ok(Bytes::from("Not supported yet"))
+                self.db.set(&key, value)?;
+                Ok("OK.".into())
             }
         }
     }

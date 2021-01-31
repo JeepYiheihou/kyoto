@@ -23,11 +23,50 @@ impl CommandParser {
         match &json_body["command"] {
             Value::String(command) => {
                 if command == "GET" {
-                    match &json_body["key"] {
-                        Value::String(key) => {
-                            Ok(Command::Get{key: key.clone()}.into())
+                    let mut is_valid = true;
+
+                    let key = match &json_body["key"] {
+                        Value::String(val) => {
+                            val.clone()
                         },
-                        _ => { Err("Invalid command.".into()) }
+                        _ => {
+                            is_valid = false;
+                            String::from("")
+                        }
+                    };
+
+                    if is_valid {
+                        Ok(Command::Get { key: key }.into())
+                    } else {
+                        Err("Invalid command".into())
+                    }
+                } else if command == "SET" {
+                    let mut is_valid = true;
+
+                    let key = match &json_body["key"] {
+                        Value::String(val) => {
+                            val.clone()
+                        },
+                        _ => {
+                            is_valid = false;
+                            String::from("")
+                        }
+                    };
+
+                    let value = match &json_body["value"] {
+                        Value::String(val) => {
+                            val.clone()
+                        },
+                        _ => {
+                            is_valid = false;
+                            String::from("")
+                        }
+                    };
+
+                    if is_valid {
+                        Ok(Command::Set { key: key, value: Bytes::from(value) }.into())
+                    } else {
+                        Err("Invalid command".into())
                     }
                 } else {
                     Err("Invalid command.".into())
@@ -46,7 +85,6 @@ impl CommandParser {
         let mut response = BytesMut::with_capacity(resp_bin.len() + val.len() + 5);
         response.put(resp_str.as_bytes());
         response.put(val);
-        response.put("\r\n\r\n".as_ref());
         Ok(response.freeze())
     }
 }
