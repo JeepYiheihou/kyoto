@@ -17,22 +17,31 @@ impl CommandHandler {
     }
 
     pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Option<Bytes>> {
-        match CommandParser::parse_command(buffer) {
+        let ret = match CommandParser::parse_command(buffer) {
             Ok(option) => {
                 match option {
                     Some(command) => {
-                        Ok(self.execute_command(command).unwrap().into())
+                        self.execute_command(command)?
                     },
                     None => {
-                        Ok(Some(Bytes::from("parsing")))
+                        Bytes::from("parsing")
                     }
                 }
             },
             Err(err) => {
-                Err(err.into())
+                println!("Error: {}\r\n", err.to_string());
+                Bytes::from("Encountered an error!")
+            }
+        };
+        
+        match CommandParser::generate_response(ret) {
+            Ok(response) => {
+                Ok(response.into())
+            },
+            Err(err) => {
+                Err(err)
             }
         }
-        
     }
 
     pub fn execute_command(&mut self, command: Command) -> crate::Result<Bytes> {

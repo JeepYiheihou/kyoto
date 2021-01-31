@@ -1,5 +1,5 @@
-use bytes::{ BytesMut };
-use serde_json::Value;
+use bytes::{ Bytes, BytesMut, BufMut };
+use serde_json::{ Value, json };
 
 use crate::machine::command::Command;
 
@@ -18,12 +18,12 @@ impl CommandParser {
         };
 
         let req_body = buffer.split_to(amt);
-        let json: Value = serde_json::from_slice(&buffer)?;
+        let json_body: Value = serde_json::from_slice(&buffer)?;
 
-        match &json["command"] {
+        match &json_body["command"] {
             Value::String(command) => {
                 if command == "GET" {
-                    match &json["key"] {
+                    match &json_body["key"] {
                         Value::String(key) => {
                             Ok(Command::Get{key: key.clone()}.into())
                         },
@@ -38,4 +38,18 @@ impl CommandParser {
             }
         }
     }
+
+    pub fn generate_response(val: Bytes) -> crate::Result<Bytes> {
+        let len = val.len();
+        let resp_str = 
+            format!("HTTP/1.1 200\r\n
+                     Content-Length: {}\r\n\r\n
+                     ", len);
+        
+        let mut response = BytesMut::with_capacity(resp_str.len() + len + 3);
+        response.put(resp_str.as_bytes());
+        response.put(val);
+        Ok(response.freeze())
+    }
 }
+

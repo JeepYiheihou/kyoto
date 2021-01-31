@@ -41,10 +41,9 @@ impl ConnHandler {
             match res {
                 Ok(option) => {
                     match option {
-                        Some(val) => {
+                        Some(response) => {
                             self.buffer.clear();
-                            self.socket.write_all(&val).await?;
-                            self.socket.write(b"\r\n").await?;
+                            self.socket.write_all(&response).await?;
                             self.socket.flush().await?;
                         },
                         None => { },
