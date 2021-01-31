@@ -36,6 +36,7 @@ impl CommandHandler {
         
         match CommandParser::generate_response(ret) {
             Ok(response) => {
+                println!("Response is: {}", String::from_utf8_lossy(&response));
                 Ok(response.into())
             },
             Err(err) => {

@@ -40,15 +40,13 @@ impl CommandParser {
     }
 
     pub fn generate_response(val: Bytes) -> crate::Result<Bytes> {
-        let len = val.len();
         let resp_str = 
-            format!("HTTP/1.1 200\r\n
-                     Content-Length: {}\r\n\r\n
-                     ", len);
-        
-        let mut response = BytesMut::with_capacity(resp_str.len() + len + 3);
+            format!("HTTP/1.1 200\r\nContent-Length: {}\r\n\r\n", val.len());
+        let resp_bin = resp_str.as_bytes();
+        let mut response = BytesMut::with_capacity(resp_bin.len() + val.len() + 5);
         response.put(resp_str.as_bytes());
         response.put(val);
+        response.put("\r\n\r\n".as_ref());
         Ok(response.freeze())
     }
 }
