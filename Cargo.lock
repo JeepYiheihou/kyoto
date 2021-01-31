@@ -257,6 +257,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "httparse",
+ "serde_json",
  "structopt",
  "tokio",
  "tracing",

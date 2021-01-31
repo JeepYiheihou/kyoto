@@ -11,6 +11,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 
 
-pub fn osaka_move_to_machine(conn_handler: &mut network::conn_handler::ConnHandler) -> crate::Result<bytes::Bytes> {
+pub fn osaka_move_to_machine(conn_handler: &mut network::conn_handler::ConnHandler) -> crate::Result<Option<bytes::Bytes>> {
     conn_handler.move_to_command_handler()
 }

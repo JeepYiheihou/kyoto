@@ -16,9 +16,23 @@ impl CommandHandler {
         }
     }
 
-    pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Bytes> {
-        let command = CommandParser::parse_command(buffer).unwrap();
-        self.execute_command(command)
+    pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Option<Bytes>> {
+        match CommandParser::parse_command(buffer) {
+            Ok(option) => {
+                match option {
+                    Some(command) => {
+                        Ok(self.execute_command(command).unwrap().into())
+                    },
+                    None => {
+                        Ok(Some(Bytes::from("parsing")))
+                    }
+                }
+            },
+            Err(err) => {
+                Err(err.into())
+            }
+        }
+        
     }
 
     pub fn execute_command(&mut self, command: Command) -> crate::Result<Bytes> {
