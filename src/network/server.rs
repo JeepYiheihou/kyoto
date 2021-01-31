@@ -1,47 +1,9 @@
 use crate::Result;
 use crate::data_structure::db::Db;
+use crate::network::conn_handler::ConnHandler;
 
-use bytes::{ BytesMut };
-use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
-use tokio::net::{ TcpListener, TcpStream };
+use tokio::net::TcpListener;
 use tracing::{ error };
-
-#[derive(Debug)]
-pub struct ConnHandler {
-    socket: BufWriter<TcpStream>,
-    buffer: BytesMut,
-    db: Db,
-}
-
-impl ConnHandler {
-    pub fn new(stream: TcpStream, db: Db) -> Self {
-        let socket = BufWriter::new(stream);
-        let buffer = BytesMut::with_capacity(4 * 1024);
-        ConnHandler { socket: socket,
-                      buffer: buffer,
-                      db: db, }
-        
-    }
-
-    pub async fn handle(&mut self) -> Result<()> {
-        loop {
-            let res = self.socket.read_buf(&mut self.buffer).await?;
-            if res == 0 {
-                if self.buffer.is_empty() {
-                    return Ok(());
-                } else {
-                    return Err("connection reset by peer".into());
-                }
-            };
-            self.socket.write(&self.buffer[..res]).await?;
-            let val = self.db.get("foo!".into()).unwrap();
-            self.socket.write_all(&val).await?;
-            self.socket.write(b"\r\n").await?;
-            self.socket.flush().await?;
-            self.buffer.clear();
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Server {

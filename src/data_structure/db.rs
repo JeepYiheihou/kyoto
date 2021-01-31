@@ -41,4 +41,13 @@ impl Db {
         let state = self.shared.hashmap.lock().unwrap();
         state.get(key).map(|entry| entry.data.clone())
     }
+
+    pub fn set(&self, key: &str, val: Bytes) -> crate::Result<()> {
+        let mut state = self.shared.hashmap.lock().unwrap();
+        let entry = Entry {
+            data: val,
+        };
+        state.insert(key.into(), entry);
+        Ok(())
+    }
 }
