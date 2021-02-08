@@ -3,32 +3,33 @@ use tokio::net::TcpStream;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
 
 use crate::Result;
-use crate::data_structure::db::Db;
-use crate::machine::command_handler::CommandHandler;
+use crate::warehouse::db::Db;
+use crate::machine::machine_handler::MachineHandler;
 
 #[derive(Debug)]
 pub struct ConnHandler {
     socket: BufWriter<TcpStream>,
     buffer: BytesMut,
-    command_handler: CommandHandler,
+    machine_handler: MachineHandler,
 }
 
 impl ConnHandler {
     pub fn new(stream: TcpStream, db: Db) -> Self {
         let socket = BufWriter::new(stream);
         let buffer = BytesMut::with_capacity(4 * 1024);
-        let command_handler = CommandHandler::new(db);
+        let machine_handler = MachineHandler::new(db);
         ConnHandler { socket: socket,
                       buffer: buffer,
-                      command_handler: command_handler,
+                      machine_handler: machine_handler,
                     }
         
     }
 
     pub async fn handle(&mut self) -> Result<()> {
         loop {
-            let res = self.socket.read_buf(&mut self.buffer).await?;
-            if res == 0 {
+            /* Socket read */
+            let read_count = self.socket.read_buf(&mut self.buffer).await?;
+            if read_count == 0 {
                 if self.buffer.is_empty() {
                     return Ok(());
                 } else {
@@ -36,7 +37,8 @@ impl ConnHandler {
                 }
             };
             
-            let res = crate::osaka_move_to_machine(self);
+            /* Handle the buffer down to machine level to further handle. */
+            let res = crate::osaka_network_to_machine(self);
 
             match res {
                 Ok(option) => {
@@ -61,6 +63,6 @@ impl ConnHandler {
     }
 
     pub fn move_to_command_handler(&mut self) -> crate::Result<Option<Bytes>> {
-        self.command_handler.handle_buffer(self.buffer.clone())
+        self.machine_handler.handle_buffer(self.buffer.clone())
     }
 }

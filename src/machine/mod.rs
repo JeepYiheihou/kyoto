@@ -1,5 +1,2 @@
-pub mod command_handler;
-
-pub mod command_parser;
-
-pub mod command;
+/* The machine handler for machine stage operations. */
+pub mod machine_handler;

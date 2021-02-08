@@ -1,7 +1,7 @@
-use bytes::{ Bytes, BytesMut, BufMut };
-use serde_json::{ Value, json };
+use bytes::{ Bytes, BytesMut };
+use serde_json::Value;
 
-use crate::machine::command::Command;
+use crate::command::command_table::Command;
 
 #[derive(Debug)]
 pub struct CommandParser { }
@@ -17,7 +17,9 @@ impl CommandParser {
             httparse::Status::Partial => return Ok(None),
         };
 
-        let req_body = buffer.split_to(amt);
+        /* After parsing the headers, move on to parse the body.
+         * We only care about the part after index `amt`. So the _prev is not used. */
+        let _prev = buffer.split_to(amt);
         let json_body: Value = serde_json::from_slice(&buffer)?;
 
         match &json_body["command"] {
@@ -76,16 +78,6 @@ impl CommandParser {
                 return Err("Invalid command.".into());
             }
         }
-    }
-
-    pub fn generate_response(val: Bytes) -> crate::Result<Bytes> {
-        let resp_str = 
-            format!("HTTP/1.1 200\r\nContent-Length: {}\r\n\r\n", val.len());
-        let resp_bin = resp_str.as_bytes();
-        let mut response = BytesMut::with_capacity(resp_bin.len() + val.len() + 5);
-        response.put(resp_str.as_bytes());
-        response.put(val);
-        Ok(response.freeze())
     }
 }
 
