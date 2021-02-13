@@ -20,7 +20,7 @@ pub mod command;
 
 
 use bytes::Bytes;
-use network::conn_handler::ConnHandler;
+use network::network_handler::NetworkHandler;
 use command::command_table::Command;
 use command::command_executor::CommandExecutor;
 
@@ -32,7 +32,7 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /* Flow to move from network stage to machine stage. */
-pub fn osaka_network_to_machine(conn_handler: &mut ConnHandler) -> crate::Result<Option<Bytes>> {
+pub fn osaka_network_to_machine(conn_handler: &mut NetworkHandler) -> crate::Result<Option<Bytes>> {
     conn_handler.move_to_command_handler()
 }
 

@@ -1,6 +1,6 @@
 use crate::Result;
 use crate::warehouse::db::Db;
-use crate::network::conn_handler::ConnHandler;
+use crate::network::network_handler::NetworkHandler;
 
 use tokio::net::TcpListener;
 use tracing::{ error };
@@ -15,6 +15,8 @@ impl Server {
         Server { port: port }
     }
 
+    /* The actual entry point to start the accept server.
+     * So this is also the place to start tokio runtime. */
     #[tokio::main]
     pub async fn run(&mut self) -> Result<()> {
         let db = Db::new();
@@ -22,9 +24,9 @@ impl Server {
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
-                    let mut conn_handler = ConnHandler::new(stream, db.clone());
+                    let mut network_handler = NetworkHandler::new(stream, db.clone());
                     tokio::spawn(async move {
-                        if let Err(err) = conn_handler.handle().await {
+                        if let Err(err) = network_handler.handle().await {
                             error!(cause = ?err, "connection error");
                         }
                     });

@@ -12,6 +12,9 @@ struct KVHashmap {
     hashmap: Mutex<HashMap<String, Entry>>,
 }
 
+/* Db struct. The entity of the whole collection of data structures.
+ * In order to be shared between threads, what the Db struct essentially
+ * contains is an Arc of the actual data structures. */
 #[derive(Debug, Clone)]
 pub struct Db {
     shared: Arc<KVHashmap>,

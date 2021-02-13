@@ -7,22 +7,21 @@ use crate::warehouse::db::Db;
 use crate::machine::machine_handler::MachineHandler;
 
 #[derive(Debug)]
-pub struct ConnHandler {
+pub struct NetworkHandler {
     socket: BufWriter<TcpStream>,
     buffer: BytesMut,
     machine_handler: MachineHandler,
 }
 
-impl ConnHandler {
+impl NetworkHandler {
     pub fn new(stream: TcpStream, db: Db) -> Self {
         let socket = BufWriter::new(stream);
         let buffer = BytesMut::with_capacity(4 * 1024);
         let machine_handler = MachineHandler::new(db);
-        ConnHandler { socket: socket,
+        NetworkHandler { socket: socket,
                       buffer: buffer,
                       machine_handler: machine_handler,
                     }
-        
     }
 
     pub async fn handle(&mut self) -> Result<()> {
