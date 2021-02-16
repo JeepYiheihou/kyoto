@@ -3,8 +3,8 @@ use tokio::net::TcpStream;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
 
 use crate::Result;
-use crate::warehouse::db::Db;
-use crate::machine::machine_handler::MachineHandler;
+use crate::data::Server;
+use crate::machine::MachineHandler;
 
 #[derive(Debug)]
 pub struct NetworkHandler {
@@ -14,11 +14,11 @@ pub struct NetworkHandler {
 }
 
 impl NetworkHandler {
-    pub fn new(stream: TcpStream, db: Db) -> Self {
+    pub fn new(stream: TcpStream, server: Server) -> Self {
         let socket = BufWriter::new(stream);
         let buffer = BytesMut::with_capacity(4 * 1024);
-        let machine_handler = MachineHandler::new(db);
-        NetworkHandler { socket: socket,
+        let machine_handler = MachineHandler::new(server);
+        Self { socket: socket,
                       buffer: buffer,
                       machine_handler: machine_handler,
                     }

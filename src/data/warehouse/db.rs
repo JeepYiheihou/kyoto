@@ -1,52 +1,35 @@
 use bytes::Bytes;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 #[derive(Debug, Clone)]
 struct Entry {
     data: Bytes,
 }
 
-#[derive(Debug)]
-struct KVHashmap {
-    hashmap: Mutex<HashMap<String, Entry>>,
-}
-
 /* Db struct. The entity of the whole collection of data structures.
  * In order to be shared between threads, what the Db struct essentially
  * contains is an Arc of the actual data structures. */
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Db {
-    shared: Arc<KVHashmap>,
-}
-
-impl KVHashmap {
-    pub fn new() -> Self {
-        let mut h: HashMap<String, Entry> = HashMap::new();
-        let entry = Entry { data: Bytes::from_static(b"bar!") };
-        h.insert("foo!".into(), entry);
-
-        let hashmap = Mutex::new(h);
-        KVHashmap {
-            hashmap: hashmap,
-        }
-    }
+    hashmap: Mutex<HashMap<String, Entry>>,
 }
 
 impl Db {
     pub fn new() -> Self {
+        let hashmap: HashMap<String, Entry> = HashMap::new();
         Db {
-            shared: Arc::new(KVHashmap::new()),
+            hashmap: Mutex::new(hashmap),
         }
     }
 
     pub fn get(&self, key: &str) -> Option<Bytes> {
-        let state = self.shared.hashmap.lock().unwrap();
+        let state = self.hashmap.lock().unwrap();
         state.get(key).map(|entry| entry.data.clone())
     }
 
     pub fn set(&self, key: &str, val: Bytes) -> crate::Result<()> {
-        let mut state = self.shared.hashmap.lock().unwrap();
+        let mut state = self.hashmap.lock().unwrap();
         let entry = Entry {
             data: val,
         };

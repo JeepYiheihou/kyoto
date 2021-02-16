@@ -1,2 +1,5 @@
 /* The machine handler for machine stage operations. */
-pub mod machine_handler;
+mod machine_handler;
+
+/* Expose MachineHandler struct. */
+pub type MachineHandler = machine_handler::MachineHandler;

@@ -7,10 +7,10 @@ pub mod network;
  * e.g. command parsing */
 pub mod machine;
 
-/* Warehouse module.
+/* Data module.
  * This is the module for data structures.
  * Commands are actually executed here. Memory IO and disk IO. */
-pub mod warehouse;
+pub mod data;
 
 /* Command module.
  * This is the module for command protocol utils.
@@ -37,6 +37,6 @@ pub fn osaka_network_to_machine(conn_handler: &mut NetworkHandler) -> crate::Res
 }
 
 /* Flow to move from machine stage to warehouse stage. */
-pub fn osaka_machine_to_warehouse(cmd: Command, db: &mut warehouse::db::Db) -> crate::Result<Bytes> {
-    CommandExecutor::execute_command(cmd, db)
+pub fn osaka_machine_to_warehouse(cmd: Command, server: &mut data::Server) -> crate::Result<Bytes> {
+    CommandExecutor::execute_command(cmd, server)
 }

@@ -1,24 +1,24 @@
-use crate::warehouse::db::Db;
+use crate::data::Server;
 use crate::command::command_parser::CommandParser;
 
 use bytes::{ Bytes, BytesMut, BufMut };
 
 #[derive(Debug)]
 pub struct MachineHandler {
-    db: Db,
+    server: Server,
 }
 
 impl MachineHandler {
-    pub fn new(db: Db) -> Self {
-        MachineHandler {
-            db: db,
+    pub fn new(server: Server) -> Self {
+        Self {
+            server: server,
         }
     }
 
     pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Option<Bytes>> {
         let ret = match CommandParser::parse_command(buffer)? {
             Some(cmd) => {
-                crate::osaka_machine_to_warehouse(cmd, &mut self.db)?
+                crate::osaka_machine_to_warehouse(cmd, &mut self.server)?
             },
             None => {
                 Bytes::from("parsing")
