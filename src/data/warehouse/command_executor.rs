@@ -1,4 +1,4 @@
-use crate::command::command_table::Command;
+use crate::protocol::Command;
 use crate::data::Server;
 
 use bytes::Bytes;

@@ -1,7 +1,7 @@
 use bytes::{ Bytes, BytesMut };
 use serde_json::Value;
 
-use crate::command::command_table::Command;
+use crate::protocol::Command;
 
 #[derive(Debug)]
 pub struct CommandParser { }

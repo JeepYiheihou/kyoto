@@ -12,17 +12,17 @@ pub mod machine;
  * Commands are actually executed here. Memory IO and disk IO. */
 pub mod data;
 
-/* Command module.
+/* Protocol module.
  * This is the module for command protocol utils.
  * Command table, command parser, etc. This is not a module for any
- * concept "stage", but a middleware in between machine and warehouse. */
-pub mod command;
+ * concept "stage", but used in stages. */
+pub mod protocol;
 
 
 use bytes::Bytes;
-use network::network_handler::NetworkHandler;
-use command::command_table::Command;
-use command::command_executor::CommandExecutor;
+use network::NetworkHandler;
+use protocol::Command;
+use data::CommandExecutor;
 
 /* Osaka Error type. */
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
