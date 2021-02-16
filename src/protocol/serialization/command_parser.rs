@@ -70,6 +70,8 @@ impl CommandParser {
                     } else {
                         Err("Invalid command".into())
                     }
+                } else if command == "INFO" {
+                    Ok(Command::Info{}.into())
                 } else {
                     Err("Invalid command.".into())
                 }

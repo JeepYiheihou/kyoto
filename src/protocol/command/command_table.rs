@@ -8,5 +8,6 @@ pub enum Command {
     Set {
         key: String,
         value: Bytes,
-    }
+    },
+    Info { },
 }

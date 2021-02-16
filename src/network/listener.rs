@@ -23,7 +23,7 @@ impl Listener {
          * Therefore we need to wrap an Arc for it so as to provide to threads. */
         let listener = TcpListener::bind(
             &format!("127.0.0.1:{}",
-            self.server.get_state().server_config.port)
+            self.server.get_state().get_port())
         ).await?;
         loop {
             match listener.accept().await {

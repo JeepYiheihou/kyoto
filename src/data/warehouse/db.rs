@@ -17,9 +17,9 @@ pub struct Db {
 
 impl Db {
     pub fn new() -> Self {
-        let hashmap: HashMap<String, Entry> = HashMap::new();
+        let hashmap_mutex: HashMap<String, Entry> = HashMap::new();
         Db {
-            hashmap: Mutex::new(hashmap),
+            hashmap: Mutex::new(hashmap_mutex),
         }
     }
 

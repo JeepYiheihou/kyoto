@@ -21,6 +21,12 @@ impl CommandExecutor {
             Command::Set { key, value } => {
                 server.get_db().set(&key, value)?;
                 Ok("OK.".into())
+            },
+            Command::Info {} => {
+                match server.get_state().get_info() {
+                    Some(res) => { Ok(res) },
+                    None => { Err("Error getting info".into()) },
+                }
             }
         }
     }
