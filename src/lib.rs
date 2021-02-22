@@ -18,11 +18,9 @@ pub mod data;
  * concept "stage", but used in stages. */
 pub mod protocol;
 
-
-use bytes::Bytes;
-use network::NetworkHandler;
-use protocol::Command;
-use data::CommandExecutor;
+use machine::MachineHandler;
+use data::Server;
+use protocol::{ FlowType, RetFlowType };
 
 /* Osaka Error type. */
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -31,12 +29,14 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
  * This is defined as a convinience */
 pub type Result<T> = std::result::Result<T, Error>;
 
-/* Flow to move from network stage to machine stage. */
-pub fn osaka_network_to_machine(conn_handler: &mut NetworkHandler) -> crate::Result<Option<Bytes>> {
-    conn_handler.move_to_command_handler()
+/* Flow moving from network stage to machine stage. */
+pub fn osaka_network_to_machine(machine_handler: &mut MachineHandler,
+                                flow: FlowType) -> crate::Result<RetFlowType> {
+    machine_handler.handle_flow(flow)
 }
 
-/* Flow to move from machine stage to warehouse stage. */
-pub fn osaka_machine_to_warehouse(cmd: Command, server: &mut data::Server) -> crate::Result<Bytes> {
-    CommandExecutor::execute_command(cmd, server)
+/* Flow moving from machine stage to warehouse stage. */
+pub fn osaka_machine_to_warehouse(server: &mut Server,
+                                  flow: FlowType) -> crate::Result<RetFlowType> {
+    server.handle_flow(flow)
 }

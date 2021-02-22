@@ -1,10 +1,11 @@
-use bytes::{ Bytes, BytesMut };
+use crate::machine::MachineHandler;
+use crate::data::Server;
+use crate::protocol::{ Response, FlowType, RetFlowType };
+use crate::Result;
+
+use bytes::{ BytesMut };
 use tokio::net::TcpStream;
 use tokio::io::{ AsyncReadExt, AsyncWriteExt, BufWriter };
-
-use crate::Result;
-use crate::data::Server;
-use crate::machine::MachineHandler;
 
 #[derive(Debug)]
 pub struct NetworkHandler {
@@ -18,10 +19,11 @@ impl NetworkHandler {
         let socket = BufWriter::new(stream);
         let buffer = BytesMut::with_capacity(4 * 1024);
         let machine_handler = MachineHandler::new(server);
-        Self { socket: socket,
-                      buffer: buffer,
-                      machine_handler: machine_handler,
-                    }
+        Self { 
+            socket: socket,
+            buffer: buffer,
+            machine_handler: machine_handler,
+        }
     }
 
     pub async fn handle(&mut self) -> Result<()> {
@@ -37,31 +39,33 @@ impl NetworkHandler {
             };
             
             /* Handle the buffer down to machine level to further handle. */
-            let res = crate::osaka_network_to_machine(self);
+            let flow = FlowType::HandleSocketBuffer{ buffer: self.buffer.clone() };
+            let ret_flow = crate::osaka_network_to_machine(&mut self.machine_handler, flow)?;
 
-            match res {
-                Ok(option) => {
-                    match option {
-                        Some(response) => {
-                            self.buffer.clear();
-                            self.socket.write_all(&response).await?;
-                            self.socket.flush().await?;
-                        },
-                        None => { },
-                    }
+            match ret_flow {
+                RetFlowType::SendResponse{ response } => {
+                    self.send_response(response).await?;
                 },
-                Err(err) => {
-                    self.buffer.clear();
-                    self.socket.write_all(b"Error: ").await?;
-                    self.socket.write_all(err.to_string().as_bytes()).await?;
-                    self.socket.write(b"\r\n").await?;
-                    self.socket.flush().await?;
-                }
+                _ => { },
             }
         }
     }
 
-    pub fn move_to_command_handler(&mut self) -> crate::Result<Option<Bytes>> {
-        self.machine_handler.handle_buffer(self.buffer.clone())
+    async fn send_response(&mut self, response: Response) -> Result<()> {
+        match response {
+            Response::Valid{ message } => {
+                self.buffer.clear();
+                self.socket.write_all(&message).await?;
+                self.socket.flush().await?;
+            },
+            Response::Error{ error_type, message } => {
+                self.buffer.clear();
+                self.socket.write_all(b"Error: ").await?;
+                self.socket.write_all(&message).await?;
+                self.socket.write(b"\r\n").await?;
+                self.socket.flush().await?;
+            }
+        }
+        Ok(())
     }
 }

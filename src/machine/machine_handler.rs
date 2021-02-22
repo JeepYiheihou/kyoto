@@ -1,8 +1,9 @@
 use crate::data::Server;
-use crate::protocol::CommandParser;
-use crate::protocol::ResponseEncoder;
+use crate::protocol::{Command, CommandParser, Response, ResponseEncoder};
+use crate::FlowType;
+use crate::RetFlowType;
 
-use bytes::{ Bytes, BytesMut };
+use bytes::{ BytesMut };
 
 #[derive(Debug)]
 pub struct MachineHandler {
@@ -16,17 +17,49 @@ impl MachineHandler {
         }
     }
 
-    pub fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<Option<Bytes>> {
-        let ret = match CommandParser::parse_command(buffer)? {
-            Some(cmd) => {
-                crate::osaka_machine_to_warehouse(cmd, &mut self.server)?
+    pub fn handle_flow(&mut self, flow: FlowType) -> crate::Result<RetFlowType> {
+        match flow {
+            FlowType::HandleSocketBuffer{ buffer } => {
+                self.handle_buffer(buffer)
+            },
+            _ => {
+                Err("Invalid flow.".into())
+            }
+        }
+    }
+
+    fn handle_buffer(&mut self, buffer: BytesMut) -> crate::Result<RetFlowType> {
+        let ret_flow = match CommandParser::parse_command(buffer)? {
+            Some(command) => {
+                self.handle_command(command)
             },
             None => {
-                Bytes::from("parsing")
+                /* Just parsing an incomplete socket buffer, so do nothing*/
+                Ok(RetFlowType::DoNothing{})
             }
         };
-        
-        let response = ResponseEncoder::generate_response(ret)?;
-        Ok(response.into())
+        ret_flow
+    }
+
+    fn handle_command(&mut self, command: Command) -> crate::Result<RetFlowType> {
+        let flow = FlowType::ExecuteCommand{ command: command };
+        let ret_flow = crate::osaka_machine_to_warehouse(&mut self.server, flow)?;
+        match ret_flow {
+            RetFlowType::ReturnResponse{ response } => {
+                match response {
+                    Response::Valid{ message } => {
+                        let encoded_message = ResponseEncoder::generate_response(message)?;
+                        let encoded_response = Response::Valid{ message: encoded_message };
+                        Ok(RetFlowType::SendResponse{ response: encoded_response })
+                    },
+                    _ => {
+                        Err("Invalid response.".into())
+                    }
+                }
+            },
+            _ => {
+                Err("Invalid flow.".into())
+            }
+        }
     }
 }

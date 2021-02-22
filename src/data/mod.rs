@@ -9,6 +9,3 @@ mod warehouse;
 
 /* Expose the Server struct. */
 pub type Server = shared::server::Server;
-
-/* Expose the CommandExecutor struct. */
-pub type CommandExecutor = shared::command_executor::CommandExecutor;
