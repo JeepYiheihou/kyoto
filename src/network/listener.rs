@@ -19,12 +19,12 @@ impl Listener {
      * So this is also the place to start tokio runtime. */
     #[tokio::main]
     pub async fn run(&mut self) -> Result<()> {
-        /* Because using tokio runtime, the server struct is accessed by multiple threads.
-         * Therefore we need to wrap an Arc for it so as to provide to threads. */
+        let port = {
+            let config = self.server.server_config.lock().unwrap();
+            config.port
+        };
         let listener = TcpListener::bind(
-            &format!("127.0.0.1:{}",
-            self.server.get_state().get_port())
-        ).await?;
+            &format!("127.0.0.1:{}", port)).await?;
         loop {
             match listener.accept().await {
                 Ok((stream, _)) => {

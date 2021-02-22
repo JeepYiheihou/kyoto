@@ -2,4 +2,4 @@
 pub mod server_config;
 
 /* Server state that contains all data and meta data of the cache. */
-pub mod server_state;
+pub mod machine_info;

@@ -11,4 +11,4 @@ mod warehouse;
 pub type Server = shared::server::Server;
 
 /* Expose the CommandExecutor struct. */
-pub type CommandExecutor = warehouse::command_executor::CommandExecutor;
+pub type CommandExecutor = shared::command_executor::CommandExecutor;
