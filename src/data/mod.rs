@@ -4,7 +4,7 @@ mod shared;
 /* Server configurations and status. */
 mod server_state;
 
-/* Data structures supported by osaka. */
+/* Data structures supported by kyoto. */
 mod warehouse;
 
 /* Expose the Server struct. */

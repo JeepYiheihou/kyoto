@@ -1,4 +1,4 @@
-# osaka
+# kyoto
 A modular designed high performance cache
 
 ## Functionality

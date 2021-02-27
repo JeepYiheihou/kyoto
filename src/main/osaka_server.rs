@@ -1,9 +1,9 @@
-use osaka::data::Server;
-use osaka::network::Listener;
+use kyoto::data::Server;
+use kyoto::network::Listener;
 
-/* Main function for osaka.
+/* Main function for kyoto.
  * Start a webserver to listen to given port and accept new connections. */
-pub fn main() -> osaka::Result<()> {
+pub fn main() -> kyoto::Result<()> {
     /* Enable logging diagnostics. */
     tracing_subscriber::fmt::try_init()?;
 

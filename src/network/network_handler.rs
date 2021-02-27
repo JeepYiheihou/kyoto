@@ -40,7 +40,7 @@ impl NetworkHandler {
             
             /* Handle the buffer down to machine level to further handle. */
             let flow = FlowType::HandleSocketBuffer{ buffer: self.buffer.clone() };
-            let ret_flow = crate::osaka_network_to_machine(&mut self.machine_handler, flow)?;
+            let ret_flow = crate::kyoto_network_to_machine(&mut self.machine_handler, flow)?;
 
             match ret_flow {
                 RetFlowType::SendResponse{ response } => {

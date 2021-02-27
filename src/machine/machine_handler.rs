@@ -43,7 +43,7 @@ impl MachineHandler {
 
     fn handle_command(&mut self, command: Command) -> crate::Result<RetFlowType> {
         let flow = FlowType::ExecuteCommand{ command: command };
-        let ret_flow = crate::osaka_machine_to_warehouse(&mut self.server, flow)?;
+        let ret_flow = crate::kyoto_machine_to_warehouse(&mut self.server, flow)?;
         match ret_flow {
             RetFlowType::ReturnResponse{ response } => {
                 match response {
