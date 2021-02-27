@@ -4,6 +4,10 @@ version = "0.0.1"
 authors = ["jiachenbai"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+description = "Modularized cache system"
+homepage = "https://github.com/JeepYiheihou/kyoto"
+repository = "https://github.com/JeepYiheihou/kyoto"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
