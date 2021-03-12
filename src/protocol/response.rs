@@ -1,6 +1,10 @@
-use crate::protocol::response::error_type::ErrorType;
-
 use bytes::Bytes;
+
+#[derive(Debug)]
+pub enum ErrorType {
+    InvalidSyntax,
+    NonExistentKey,
+}
 
 #[derive(Debug)]
 pub enum Response {

@@ -1,4 +1,4 @@
-use kyoto::data::Server;
+use kyoto::network::Server;
 use kyoto::network::Listener;
 
 /* Main function for kyoto.
