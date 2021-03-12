@@ -11,3 +11,6 @@ pub type Command = command_table::Command;
 
 /* Expose Response struct. */
 pub type Response = response::Response;
+
+/* Expose enum ErrorType for Response struct. */
+pub type ErrorType = response::ErrorType;

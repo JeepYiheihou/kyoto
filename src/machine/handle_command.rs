@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::protocol::{ Command, Response };
+use crate::protocol::{ Command, Response, ErrorType };
 use crate::protocol::{ encode_response::generate_response, parse_command::parse_command };
 use crate::network::Client;
 use crate::network::Server;
@@ -30,6 +30,21 @@ async fn handle_command(client: &mut Client, server: &mut Server, command: Comma
             send_response(client, encoded_response).await?;
             Ok(())
         },
+        Response::Error { error_type, message } => {
+            let error_prefix;
+            match error_type {
+                ErrorType::InvalidSyntax => {
+                    error_prefix = "Invalid syntax error: ";
+                },
+                ErrorType::NonExistentKey => {
+                    error_prefix = "Nonexistent key error: ";
+                },
+            }
+            let new_message = String::from(format!("{}{}", error_prefix, message));
+            let encoded_response = generate_response(Bytes::from(new_message))?;
+            send_response(client, encoded_response).await?;
+            Ok(())
+        }
         _ => {
             Err("Invalid response.".into())
         }
@@ -45,8 +60,20 @@ fn execute_command(client: &mut Client, server: &mut Server, cmd: Command) -> cr
         Command::Set { key, value } => {
             _execute_set_cmd(client, server, key, value)
         },
-        Command::Info {} => {
+        Command::Info { } => {
             _execute_info_cmd(client, server)
+        },
+        Command::ReplJoin { addr, port } => {
+            _execute_repl_join_cmd(client, server, addr, port)
+        }
+        Command::BadCommand { message } => {
+            _handle_bad_cmd(client, server, message)
+        }
+        _ => {
+            Ok(Response::Error {
+                error_type: ErrorType::InvalidSyntax,
+                message: "Invalid command!".into()
+            })
         }
     }
 }
@@ -61,7 +88,10 @@ fn _execute_get_cmd(client: &mut Client,
             Ok(response)
         },
         None => {
-            let response = Response::Valid{ message: "Key not found.".into() };
+            let response = Response::Error{
+                error_type: ErrorType::NonExistentKey,
+                message: "Key not found.".into()
+            };
             Ok(response)
         }
     }
@@ -88,5 +118,30 @@ fn _execute_info_cmd(client: &mut Client,
     }
 
     let response = Response::Valid{ message: info.freeze() };
+    Ok(response)
+}
+
+/* Execute the REPL_JOIN command. */
+fn _execute_repl_join_cmd(client: &mut Client,
+                          server: &mut Server,
+                          addr: String,
+                          port: u16) -> crate::Result<Response> {
+    {
+        let mut server_config = server.server_config.lock().unwrap();
+        let addr = client.connection.socket.peer_addr()?;
+        server_config.replication_config.add_replica_node(addr);
+    }
+    let response = Response::Valid{ message: "Ok.".into() };
+    Ok(response)
+}
+
+/* Handle bad shaped command. */
+fn _handle_bad_cmd(client: &mut Client,
+                         server: &mut Server,
+                         message: String) -> crate::Result<Response> {
+    let response = Response::Error{
+        error_type: ErrorType::InvalidSyntax,
+        message: message.into()
+    };
     Ok(response)
 }

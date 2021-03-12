@@ -13,6 +13,6 @@ pub enum Response {
     },
     Error {
         error_type: ErrorType,
-        message: Bytes,
+        message: String,
     },
 }

@@ -1,8 +1,11 @@
 /* Server configurations and status. */
-mod db;
+pub mod db;
 
 /* Data structures supported by kyoto. */
-mod server_config;
+pub mod server_config;
+
+/* ReplicationConfig structure for replication data. */
+pub mod replication_config;
 
 /* Expose the Server struct. */
 pub type Db = db::Db;
