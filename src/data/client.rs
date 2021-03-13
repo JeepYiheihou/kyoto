@@ -1,4 +1,4 @@
-use crate::network::connection::Connection;
+use crate::data::connection::Connection;
 
 use tokio::net::TcpStream;
 

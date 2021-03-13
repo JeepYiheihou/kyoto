@@ -1,13 +1,11 @@
 use crate::Result;
 use crate::protocol::{ Command, Response, ErrorType };
 use crate::protocol::{ encode_response::generate_response, parse_command::parse_command };
-use crate::network::Client;
-use crate::network::Server;
+use crate::data::Client;
+use crate::data::Server;
 use crate::network::socket_io::send_response;
 
 use bytes::{ Bytes, BytesMut };
-
-
 
 pub async fn handle_buffer(client: &mut Client, server: &mut Server) -> Result<()> {
     let buffer = client.connection.buffer.clone();
@@ -128,8 +126,7 @@ fn _execute_repl_join_cmd(client: &mut Client,
                           port: u16) -> crate::Result<Response> {
     {
         let mut server_config = server.server_config.lock().unwrap();
-        let addr = client.connection.socket.peer_addr()?;
-        server_config.replication_config.add_replica_node(addr);
+        //server_config.replication_config.add_replica_node(client);
     }
     let response = Response::Valid{ message: "Ok.".into() };
     Ok(response)

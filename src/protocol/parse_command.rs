@@ -20,77 +20,13 @@ pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
     match &json_body["command"] {
         Value::String(command) => {
             if command == "GET" {
-                /* Parsing GET command. */
-                let key;
-                match &json_body["key"] {
-                    Value::String(val) => {
-                        key = val.clone();
-                    },
-                    _ => {
-                        let msg = String::from("Invalid key for GET command");
-                        return Ok(Command::BadCommand{ message: msg }.into());
-                    }
-                };
-
-                Ok(Command::Get{ key: key }.into())
+                parse_get_command(json_body)
             } else if command == "SET" {
-                /* Parsing SET command. */
-                let key;
-                let value;
-                match &json_body["key"] {
-                    Value::String(val) => {
-                        key = val.clone()
-                    },
-                    _ => {
-                        let msg = String::from("Invalid key for SET command");
-                        return Ok(Command::BadCommand{ message: msg }.into());
-                    }
-                };
-
-                match &json_body["value"] {
-                    Value::String(val) => {
-                        value = val.clone()
-                    },
-                    _ => {
-                        let msg = String::from("Invalid value for SET command");
-                        return Ok(Command::BadCommand{ message: msg }.into());
-                    }
-                };
-
-                Ok(Command::Set{ key: key, value: Bytes::from(value) }.into())
+                parse_set_command(json_body)
             } else if command == "INFO" {
-                /* Parsing INFO command. */
-                Ok(Command::Info{}.into())
+                parse_info_command(json_body)
             } else if command == "REPL_JOIN" {
-                /* Parsing REPL_JOIN command. */
-                let addr;
-                let port;
-                match &json_body["addr"] {
-                    Value::String(val) => {
-                        addr = val.clone()
-                    },
-                    _ => {
-                        let msg = String::from("Invalid address for REPL_JOIN command");
-                        return Ok(Command::BadCommand{ message: msg }.into());
-                    }
-                };
-
-                match &json_body["port"] {
-                    Value::Number(val) => {
-                        if let Some(num) = val.as_u64() {
-                            port = num as u16
-                        } else {
-                            let msg = String::from("Invalid port for REPL_JOIN command");
-                            return Ok(Command::BadCommand{ message: msg }.into());
-                        }
-                    },
-                    _ => {
-                        let msg = String::from("Invalid port for REPL_JOIN command");
-                        return Ok(Command::BadCommand{ message: msg }.into());
-                    }
-                };
-
-                Ok(Command::ReplJoin{ addr, port }.into())
+                parse_repl_join_command(json_body)
             } else {
                 /* Invalid command name. */
                 let msg = String::from("Invalid command name");
@@ -103,4 +39,84 @@ pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
             return Ok(Command::BadCommand{ message: msg }.into());
         }
     }
+}
+
+/* Parse GET command. */
+fn parse_get_command(json_body: Value)-> crate::Result<Option<Command>> {
+    let key;
+    match &json_body["key"] {
+        Value::String(val) => {
+            key = val.clone();
+        },
+        _ => {
+            let msg = String::from("Invalid key for GET command");
+            return Ok(Command::BadCommand{ message: msg }.into());
+        }
+    };
+
+    Ok(Command::Get{ key: key }.into())
+}
+
+/* Parse SET command. */
+fn parse_set_command(json_body: Value) -> crate::Result<Option<Command>> {
+    let key;
+    let value;
+    match &json_body["key"] {
+        Value::String(val) => {
+            key = val.clone()
+        },
+        _ => {
+            let msg = String::from("Invalid key for SET command");
+            return Ok(Command::BadCommand{ message: msg }.into());
+        }
+    };
+
+    match &json_body["value"] {
+        Value::String(val) => {
+            value = val.clone()
+        },
+        _ => {
+            let msg = String::from("Invalid value for SET command");
+            return Ok(Command::BadCommand{ message: msg }.into());
+        }
+    };
+
+    Ok(Command::Set{ key: key, value: Bytes::from(value) }.into())
+}
+
+/* Parsing INFO command. */
+fn parse_info_command(json_body: Value) -> crate::Result<Option<Command>> {
+    Ok(Command::Info{}.into())
+}
+
+/* Parsing REPL_JOIN command. */
+fn parse_repl_join_command(json_body: Value) -> crate::Result<Option<Command>> {
+    let addr;
+    let port;
+    match &json_body["addr"] {
+        Value::String(val) => {
+            addr = val.clone()
+        },
+        _ => {
+            let msg = String::from("Invalid address for REPL_JOIN command");
+            return Ok(Command::BadCommand{ message: msg }.into());
+        }
+    };
+
+    match &json_body["port"] {
+        Value::Number(val) => {
+            if let Some(num) = val.as_u64() {
+                port = num as u16
+            } else {
+                let msg = String::from("Invalid port for REPL_JOIN command");
+                return Ok(Command::BadCommand{ message: msg }.into());
+            }
+        },
+        _ => {
+            let msg = String::from("Invalid port for REPL_JOIN command");
+            return Ok(Command::BadCommand{ message: msg }.into());
+        }
+    };
+
+    Ok(Command::ReplJoin{ addr, port }.into())
 }

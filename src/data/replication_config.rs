@@ -1,5 +1,6 @@
+use crate::data::Client;
+
 use std::vec::Vec;
-use std::net::SocketAddr;
 
 #[derive(Debug)]
 pub enum ReplicationRole {
@@ -10,7 +11,7 @@ pub enum ReplicationRole {
 
 #[derive(Debug)]
 pub struct ReplicationNode {
-    addr: SocketAddr,
+    client: Client,
 }
 
 #[derive(Debug)]
@@ -20,9 +21,9 @@ pub struct ReplicationConfig {
 }
 
 impl ReplicationNode {
-    pub fn new(addr: SocketAddr) -> Self {
+    pub fn new(client: Client) -> Self {
         Self {
-            addr: addr,
+            client: client,
         }
     }
 }
@@ -37,8 +38,8 @@ impl ReplicationConfig {
         }
     }
 
-    pub fn add_replica_node(&mut self, addr: SocketAddr) {
-        let new_node = ReplicationNode::new(addr);
+    pub fn add_replica_node(&mut self, client: Client) {
+        let new_node = ReplicationNode::new(client);
         self.replicas.push(new_node);
     }
 }

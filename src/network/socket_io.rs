@@ -1,6 +1,6 @@
 use crate::Result;
-use crate::network::Server;
-use crate::network::Client;
+use crate::data::Server;
+use crate::data::Client;
 use crate::machine::handle_command;
 
 use bytes::Bytes;
