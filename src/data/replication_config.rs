@@ -1,5 +1,6 @@
 use crate::data::Client;
 
+use std::sync::Arc;
 use std::vec::Vec;
 
 #[derive(Debug)]
@@ -11,7 +12,7 @@ pub enum ReplicationRole {
 
 #[derive(Debug)]
 pub struct ReplicationNode {
-    client: Client,
+    client: Arc<Client>,
 }
 
 #[derive(Debug)]
@@ -21,7 +22,7 @@ pub struct ReplicationConfig {
 }
 
 impl ReplicationNode {
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: Arc<Client>) -> Self {
         Self {
             client: client,
         }
@@ -38,7 +39,7 @@ impl ReplicationConfig {
         }
     }
 
-    pub fn add_replica_node(&mut self, client: Client) {
+    pub fn add_replica_node(&mut self, client: Arc<Client>) {
         let new_node = ReplicationNode::new(client);
         self.replicas.push(new_node);
     }

@@ -85,7 +85,7 @@ fn parse_set_command(json_body: Value) -> crate::Result<Option<Command>> {
 }
 
 /* Parsing INFO command. */
-fn parse_info_command(json_body: Value) -> crate::Result<Option<Command>> {
+fn parse_info_command(_json_body: Value) -> crate::Result<Option<Command>> {
     Ok(Command::Info{}.into())
 }
 

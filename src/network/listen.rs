@@ -3,6 +3,7 @@ use crate::data::Server;
 use crate::data::Client;
 use crate::network::socket_io;
 
+use std::sync::Arc;
 use tokio::net::TcpListener;
 use tracing::{ error };
 
@@ -16,11 +17,11 @@ pub async fn listen(server: Server) -> Result<()> {
         match listener.accept().await {
             Ok((stream, _)) => {
                 /* The server struct only contains an Arc counter for the real contents.
-                    * So the clone only creates a new Arc counter. */
-                let mut client = Client::new(stream);
-                let mut server = server.clone();
+                 * So the clone only creates a new Arc counter. */
+                let client = Arc::new(Client::new(stream));
+                let server = Arc::new(server.clone());
                 tokio::spawn(async move {
-                    if let Err(err) = socket_io::handle_socket_buffer(&mut client, &mut server).await {
+                    if let Err(err) = socket_io::handle_socket_buffer(client, server).await {
                         error!(cause = ?err, "connection error")
                     }
                 });
