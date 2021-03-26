@@ -12,3 +12,7 @@ pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
     response.put(val);
     Ok(response.freeze())
 }
+
+// pub fn generate_request(cmd: Command) -> create::Result<Bytes> {
+    
+// }

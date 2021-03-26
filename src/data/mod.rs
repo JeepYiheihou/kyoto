@@ -19,6 +19,12 @@ pub mod replication_config;
 /* Expose Server struct. */
 pub type Server = server::Server;
 
+/* Expose ClientType enum. */
+pub type ClientType = client::ClientType;
+
+/* Expose ClientCollections enum */
+pub type ClientCollections = client::ClientCollections;
+
 /* Expose Client struct. */
 pub type Client = client::Client;
 

@@ -1,3 +1,4 @@
+use crate::Result;
 use crate::data::replication_config::ReplicationConfig;
 
 use bytes::{ BytesMut, BufMut };
@@ -17,9 +18,9 @@ impl ServerConfig {
         }
     }
 
-    pub fn generate_info(&self, mut info: BytesMut) -> BytesMut {
-        let port_info = format!("port: {}", self.port);
+    pub fn generate_info(&self, mut info: BytesMut) -> Result<BytesMut> {
+        let port_info = format!("port: {}\r\n", self.port);
         info.put(port_info.as_bytes());
-        info
+        Ok(info)
     }
 }

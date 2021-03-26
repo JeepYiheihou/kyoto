@@ -1,11 +1,13 @@
 use crate::data::ServerConfig;
+use crate::data::ClientCollections;
 use crate::data::Db;
 
-use std::sync::{ Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Server {
-    pub server_config: Arc<Mutex<ServerConfig>>,
+    pub server_config: Arc<std::sync::Mutex<ServerConfig>>,
+    pub client_collections: Arc<ClientCollections>,
     pub db: Arc<Db>,
 }
 
@@ -16,10 +18,12 @@ pub struct Server {
  * This is only for Arc, not for Mutex. Locks need to be handled separately. */
 impl Server {
     pub fn new() -> Self {
-        let server_config = Arc::new(Mutex::new(ServerConfig::new()));
+        let server_config = Arc::new(std::sync::Mutex::new(ServerConfig::new()));
+        let client_collections = Arc::new(ClientCollections::new()); 
         let db = Arc::new(Db::new());
         Self {
             server_config: server_config,
+            client_collections: client_collections,
             db: db,
         }
     }

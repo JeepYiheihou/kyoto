@@ -1,8 +1,8 @@
-pub mod parse_command;
-
 pub mod command_table;
 
-pub mod encode_response;
+pub mod decode;
+
+pub mod encode;
 
 pub mod response;
 
