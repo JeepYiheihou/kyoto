@@ -54,7 +54,7 @@ impl ClientCollections {
             },
             ClientType::Replication => {
                 /* Evict from customer hashmap first. */
-                self.evict_client(ClientType::Customer, fd);
+                self.evict_client(&ClientType::Customer, fd);
 
                 /* And then add to replication hashmap. */
                 let mut clients = self.replication_clients.lock().unwrap();
@@ -66,7 +66,7 @@ impl ClientCollections {
         }
     }
 
-    pub fn evict_client(&self, client_type: ClientType, fd: i32) {
+    pub fn evict_client(&self, client_type: &ClientType, fd: i32) {
         match client_type {
             ClientType::Customer => {
                 let mut clients = self.customer_clients.lock().unwrap();

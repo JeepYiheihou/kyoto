@@ -24,9 +24,12 @@ pub async fn handle_socket_buffer(client: Arc<Mutex<Client>>, server: Arc<Server
             let read_count = conn.read_to_buf().await?;
             /* Handle read errors. */
             if read_count == 0 {
+                let evict_fd = conn.socket.as_raw_fd();
                 if conn.buffer.is_empty() {
+                    server.client_collections.evict_client(&c.client_type, evict_fd);
                     return Ok(());
                 } else {
+                    server.client_collections.evict_client(&c.client_type, evict_fd);
                     return Err("connection reset by peer".into());
                 }
             }
