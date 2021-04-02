@@ -12,8 +12,12 @@ use tracing::{ error };
  * So this is also the place to start tokio runtime. */
 #[tokio::main]
 pub async fn listen(server: Server) -> Result<()> {
-    let port: u16 = 9736;
+    let port = {
+        let server_config = server.server_config.lock().unwrap();
+        server_config.port
+    };
     let listener = TcpListener::bind(&format!("127.0.0.1:{}", port)).await?;
+    println!("Listening to port: {}", port);
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {

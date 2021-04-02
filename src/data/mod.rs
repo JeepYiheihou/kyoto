@@ -1,5 +1,11 @@
+/* Constants mod for constant values. */
+pub mod constants;
+
 /* Server struct for all shared data. */
 pub mod server;
+
+/* Params struct for parameters to be fed to server. */
+pub mod params;
 
 /* Client struct for all client specific data. */
 pub mod client;
@@ -18,6 +24,9 @@ pub mod replication_config;
 
 /* Expose Server struct. */
 pub type Server = server::Server;
+
+/* Expose Params struct. */
+pub type Params = params::Params;
 
 /* Expose ClientType enum. */
 pub type ClientType = client::ClientType;
