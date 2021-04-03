@@ -1,3 +1,5 @@
+use crate::protocol::Command;
+
 use bytes::{ Bytes, BytesMut, BufMut };
 
 pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
@@ -13,6 +15,46 @@ pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
     Ok(response.freeze())
 }
 
-// pub fn generate_request(cmd: Command) -> create::Result<Bytes> {
-    
-// }
+pub fn generate_request(cmd: Command) -> crate::Result<Bytes> {
+    let body = generate_request_body(cmd)?;
+    let header = format!("POST / HTTP/1.1\r\nContent-Type: application/json\r\nConnection: keep-alive\r\nContent-Length: {}\r\n\r\n", body.len());
+    let request = format!("{}{:?}", header, body);
+    Ok(Bytes::from(request))
+}
+
+fn generate_request_body(cmd: Command) -> crate::Result<Bytes> {
+    match cmd {
+        Command::Set{..} => {
+            generate_set_request_body(cmd)
+        },
+        Command::ReplPing{..} => {
+            generate_repl_join_request_body(cmd)
+        },
+        _ => {
+            Err("Not supported command type for encoding.".into())
+        }
+    }
+}
+
+fn generate_set_request_body(cmd: Command) -> crate::Result<Bytes> {
+    if let Command::Set{ key, value, id } = cmd {
+        let body = 
+            format!("{{\"command\":\"SET\",\"key\":{},\"value\":{:?},\"id\":{}}}",
+            key, value, id);
+        return Ok(Bytes::from(body));
+    }
+    /* Actually this shouldn't have happened because we have filtered command type
+     * from generate_request_body().*/
+    Err("Invalid command type".into())
+}
+
+fn generate_repl_join_request_body(cmd: Command) -> crate::Result<Bytes> {
+    if let Command::ReplPing{ id } = cmd {
+        let body = 
+            format!("{{\"command\":\"REPL_PING\",\"id\":{}}}", id);
+        return Ok(Bytes::from(body));
+    }
+    /* Actually this shouldn't have happened because we have filtered command type
+     * from generate_request_body().*/
+    Err("Invalid command type".into())
+}

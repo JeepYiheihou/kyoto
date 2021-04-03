@@ -33,6 +33,7 @@ pub async fn handle_socket_buffer(client: Arc<Mutex<Client>>, server: Arc<Server
                     return Err("connection reset by peer".into());
                 }
             }
+            println!("{:?}", &conn.buffer);
             handle_command::handle_buffer(c, server.clone()).await?
         };
         match client_type {

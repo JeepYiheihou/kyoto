@@ -60,16 +60,16 @@ async fn handle_command(client: &mut Client, server: Arc<Server>, command: Comma
 /* Entry command to execute a command by its type. */
 fn execute_command(client: &Client, server: Arc<Server>, cmd: Command) -> crate::Result<Response> {
     match cmd {
-        Command::Get { key } => {
+        Command::Get { key, id } => {
             _execute_get_cmd(client, server, key)
         },
-        Command::Set { key, value } => {
+        Command::Set { key, value, id } => {
             _execute_set_cmd(client, server, key, value)
         },
-        Command::Info {} => {
+        Command::Info { id } => {
             _execute_info_cmd(client, server)
         },
-        Command::ReplJoin { addr, port } => {
+        Command::ReplJoin { addr, port, id } => {
             _execute_repl_join_cmd(client, server, addr, port)
         }
         Command::BadCommand { message } => {

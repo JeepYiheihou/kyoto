@@ -41,6 +41,16 @@ pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
     }
 }
 
+/* Parse id number from a given json hashmap. */
+fn parse_id(json_body: &Value) -> i64 {
+    match &json_body["id"] {
+        Value::Number(val) => {
+            val.as_i64().unwrap()
+        }
+        _ => -1,
+    }
+}
+
 /* Parse GET command. */
 fn parse_get_command(json_body: Value)-> crate::Result<Option<Command>> {
     let key;
@@ -54,7 +64,9 @@ fn parse_get_command(json_body: Value)-> crate::Result<Option<Command>> {
         }
     };
 
-    Ok(Command::Get{ key: key }.into())
+    let id = parse_id(&json_body);
+
+    Ok(Command::Get{ key: key, id: id }.into())
 }
 
 /* Parse SET command. */
@@ -81,12 +93,15 @@ fn parse_set_command(json_body: Value) -> crate::Result<Option<Command>> {
         }
     };
 
-    Ok(Command::Set{ key: key, value: Bytes::from(value) }.into())
+    let id = parse_id(&json_body);
+
+    Ok(Command::Set{ key: key, value: Bytes::from(value), id: id }.into())
 }
 
 /* Parsing INFO command. */
-fn parse_info_command(_json_body: Value) -> crate::Result<Option<Command>> {
-    Ok(Command::Info{}.into())
+fn parse_info_command(json_body: Value) -> crate::Result<Option<Command>> {
+    let id = parse_id(&json_body);
+    Ok(Command::Info{ id: id }.into())
 }
 
 /* Parsing REPL_JOIN command. */
@@ -118,5 +133,7 @@ fn parse_repl_join_command(json_body: Value) -> crate::Result<Option<Command>> {
         }
     };
 
-    Ok(Command::ReplJoin{ addr, port }.into())
+    let id = parse_id(&json_body);
+
+    Ok(Command::ReplJoin{ addr: addr, port: port, id: id }.into())
 }

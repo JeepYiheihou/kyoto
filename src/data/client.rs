@@ -123,7 +123,7 @@ impl Client {
 
 pub fn get_client_type(cmd: &Command) -> ClientType {
     match cmd {
-        Command::ReplPing {} => {
+        Command::ReplPing { id } => {
             return ClientType::Replication;
         }
         _ => {
