@@ -30,11 +30,15 @@ impl ServerConfig {
     }
 
     pub fn generate_info(&self, mut info: BytesMut) -> Result<BytesMut> {
+        info.put("[Server config info]\r\n".as_bytes());
+
         let port_info = format!("port: {}\r\n", self.port);
         info.put(port_info.as_bytes());
 
         let input_buffer_size_info = format!("input_buffer_size: {}\r\n", self.input_buffer_size);
         info.put(input_buffer_size_info.as_bytes());
+
+        info.put("\r\n".as_bytes());
 
         Ok(info)
     }

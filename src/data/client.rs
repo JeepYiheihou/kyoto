@@ -101,6 +101,8 @@ impl ClientCollections {
     }
 
     pub fn generate_info(&self, mut info: BytesMut) -> Result<BytesMut> {
+        info.put("[Client info]\r\n".as_bytes());
+
         let customer_clients_num = self.get_client_number(ClientType::Customer)?;
         let customer_clients_info = format!("customer client num: {}\r\n", customer_clients_num);
         info.put(customer_clients_info.as_bytes());
@@ -108,6 +110,9 @@ impl ClientCollections {
         let replication_clients_num = self.get_client_number(ClientType::Replication)?;
         let replication_clients_info = format!("replication client num: {}\r\n", replication_clients_num);
         info.put(replication_clients_info.as_bytes());
+
+        info.put("\r\n".as_bytes());
+
         Ok(info)
     }
 }
