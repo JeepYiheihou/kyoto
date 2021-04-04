@@ -6,4 +6,7 @@ use structopt::StructOpt;
 pub struct Params {
     #[structopt(name = "port", long = "--port")]
     pub port: Option<String>,
+
+    #[structopt(name = "input buffer size", long = "--input-buffer-size")]
+    pub input_buffer_size: Option<String>,
 }

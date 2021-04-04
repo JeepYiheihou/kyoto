@@ -113,10 +113,10 @@ impl ClientCollections {
 }
 
 impl Client {
-    pub fn new(client_type: ClientType, stream: TcpStream) -> Self {
+    pub fn new(client_type: ClientType, stream: TcpStream, input_buffer_size: usize) -> Self {
         Self {
             client_type: client_type,
-            connection: Connection::new(stream),
+            connection: Connection::new(stream, input_buffer_size),
         }
     }
 }

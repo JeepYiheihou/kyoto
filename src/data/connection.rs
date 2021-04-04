@@ -11,8 +11,8 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream) -> Self {
-        let buffer = BytesMut::with_capacity(4 * 1024);
+    pub fn new(stream: TcpStream, input_buffer_size: usize) -> Self {
+        let buffer = BytesMut::with_capacity(input_buffer_size);
         Self {
             socket: stream,
             buffer: buffer,
