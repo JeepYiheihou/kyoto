@@ -28,8 +28,8 @@ pub async fn handle_buffer(client: &mut Client, server: Arc<Server>) -> Result<(
     }
 }
 
-async fn handle_command(client: &mut Client, server: Arc<Server>, command: Command) -> Result<()> {
-    let response = execute_command(client, server, command)?;
+async fn handle_command(client: &mut Client, server: Arc<Server>, mut command: Command) -> Result<()> {
+    let response = execute_command(client, server, &mut command)?;
     match response {
         Response::Valid { message } => {
             let encoded_response = generate_response(message, 200)?;
@@ -58,22 +58,22 @@ async fn handle_command(client: &mut Client, server: Arc<Server>, command: Comma
 }
 
 /* Entry command to execute a command by its type. */
-fn execute_command(client: &Client, server: Arc<Server>, cmd: Command) -> crate::Result<Response> {
+fn execute_command(client: &Client, server: Arc<Server>, cmd: &mut Command) -> crate::Result<Response> {
     match cmd {
-        Command::Get { key, id } => {
-            _execute_get_cmd(client, server, key)
+        Command::Get { .. } => {
+            _execute_get_cmd(client, server, cmd)
         },
-        Command::Set { key, value, id } => {
-            _execute_set_cmd(client, server, key, value)
+        Command::Set { .. } => {
+            _execute_set_cmd(client, server, cmd)
         },
-        Command::Info { id } => {
-            _execute_info_cmd(client, server)
+        Command::Info { .. } => {
+            _execute_info_cmd(client, server, cmd)
         },
-        Command::ReplJoin { addr, port, id } => {
-            _execute_repl_join_cmd(client, server, addr, port)
+        Command::ReplJoin { .. } => {
+            _execute_repl_join_cmd(client, server, cmd)
         }
-        Command::BadCommand { message } => {
-            _handle_bad_cmd(client, server, message)
+        Command::BadCommand { .. } => {
+            _handle_bad_cmd(client, server, cmd)
         }
         _ => {
             Ok(Response::Error {
@@ -87,64 +87,94 @@ fn execute_command(client: &Client, server: Arc<Server>, cmd: Command) -> crate:
 /* Execute the GET command. */
 fn _execute_get_cmd(_client: &Client,
                     server: Arc<Server>,
-                    key: String) -> crate::Result<Response> {
-    match server.db.get(&key) {
-        Some(res) => {
-            let response = Response::Valid{ message: res };
-            Ok(response)
-        },
-        None => {
-            let response = Response::Error{
-                error_type: ErrorType::NonExistentKey,
-                message: "Key not found.".into()
-            };
-            Ok(response)
+                    cmd: &Command) -> crate::Result<Response> {
+    let result = if let Command::Get { key, id } = cmd {
+        match server.db.get(&key) {
+            Some(res) => {
+                let response = Response::Valid{ message: res };
+                Ok(response)
+            },
+            None => {
+                let response = Response::Error{
+                    error_type: ErrorType::NonExistentKey,
+                    message: "Key not found.".into()
+                };
+                Ok(response)
+            }
         }
-    }
+    } else {
+        /* This shouldn't happen since command type has been filtered by execute_command(). */
+        Err("Invalid command type".into())
+    };
+    result
 }
 
 /* Execute the SET command. */
 fn _execute_set_cmd(_client: &Client,
                     server: Arc<Server>,
-                    key: String,
-                    value: Bytes)-> crate::Result<Response> {
-    server.db.set(&key, value)?;
-    let response = Response::Valid{ message: "Ok.".into() };
-    Ok(response)
+                    cmd: &mut Command)-> crate::Result<Response> {
+    let result = if let Command::Set { key, value, id } = cmd {
+        let new_id = server.db.set(&key, value)?;
+        *id = new_id;
+        let response = Response::Valid{ message: "Ok.".into() };
+        Ok(response)
+    } else {
+        /* This shouldn't happen since command type has been filtered by execute_command(). */
+        Err("Invalid command type".into())
+    };
+    result
 }
 
 /* Execute the INFO command. */
 fn _execute_info_cmd(_client: &Client,
-                     server: Arc<Server>) -> crate::Result<Response> {
-    let mut info = BytesMut::from("");
-    /* Get server config info. */
-    info = {
-        let server_config = server.server_config.lock().unwrap();
-        server_config.generate_info(info)?
+                     server: Arc<Server>,
+                     cmd: &Command) -> crate::Result<Response> {
+    let result = if let Command::Info { id } = cmd {
+        let mut info = BytesMut::from("");
+        /* Get server config info. */
+        info = {
+            let server_config = server.server_config.lock().unwrap();
+            server_config.generate_info(info)?
+        };
+    
+        info = server.client_collections.generate_info(info)?;
+    
+        let response = Response::Valid{ message: info.freeze() };
+        Ok(response)
+    } else {
+        /* This shouldn't happen since command type has been filtered by execute_command(). */
+        Err("Invalid command type".into())
     };
-
-    info = server.client_collections.generate_info(info)?;
-
-    let response = Response::Valid{ message: info.freeze() };
-    Ok(response)
+    result
 }
 
 /* Execute the REPL_JOIN command. */
 fn _execute_repl_join_cmd(client: &Client,
                           server: Arc<Server>,
-                          _addr: String,
-                          _port: u16) -> crate::Result<Response> {
-    let response = Response::Valid{ message: "Ok.".into() };
-    Ok(response)
+                          cmd: &Command) -> crate::Result<Response> {
+    let result = if let Command::ReplJoin { addr, port, id } = cmd {
+        let response = Response::Valid{ message: "Ok.".into() };
+        Ok(response)
+    } else {
+        /* This shouldn't happen since command type has been filtered by execute_command(). */
+        Err("Invalid command type".into())
+    };
+    result
 }
 
 /* Handle bad shaped command. */
 fn _handle_bad_cmd(_client: &Client,
                    _server: Arc<Server>,
-                   message: String) -> crate::Result<Response> {
-    let response = Response::Error{
-        error_type: ErrorType::InvalidSyntax,
-        message: message.into()
+                   cmd: &Command) -> crate::Result<Response> {
+    let result = if let Command::BadCommand { message } = cmd {
+        let response = Response::Error{
+            error_type: ErrorType::InvalidSyntax,
+            message: message.into()
+        };
+        Ok(response)
+    } else {
+        /* This shouldn't happen since command type has been filtered by execute_command(). */
+        Err("Invalid command type".into())
     };
-    Ok(response)
+    result
 }

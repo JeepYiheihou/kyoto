@@ -16,6 +16,9 @@ pub mod connection;
 /* Server configurations and status. */
 pub mod db;
 
+/* UIDHandler to generate UID for commands. */
+pub mod uid;
+
 /* Data structures supported by kyoto. */
 pub mod server_config;
 
@@ -39,6 +42,9 @@ pub type Client = client::Client;
 
 /* Expose the Server struct. */
 pub type Db = db::Db;
+
+/* Expose UIDHandler struct. */
+pub type UIDHandler = uid::UIDHandler;
 
 /* Expose the ServerConfig struct. */
 pub type ServerConfig = server_config::ServerConfig;

@@ -1,3 +1,5 @@
+use crate::data::UIDHandler;
+
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -13,12 +15,15 @@ struct Entry {
 #[derive(Debug)]
 pub struct Db {
     hashmap: Mutex<HashMap<String, Entry>>,
+    uid_handler: UIDHandler,
+
 }
 
 impl Db {
     pub fn new() -> Self {
         Db {
             hashmap: Mutex::new(HashMap::new()),
+            uid_handler: UIDHandler::new(),
         }
     }
 
@@ -27,12 +32,13 @@ impl Db {
         state.get(key).map(|entry| entry.data.clone())
     }
 
-    pub fn set(&self, key: &str, val: Bytes) -> crate::Result<()> {
+    pub fn set(&self, key: &str, val: &Bytes) -> crate::Result<i64> {
         let mut state = self.hashmap.lock().unwrap();
         let entry = Entry {
-            data: val,
+            data: val.clone(),
         };
         state.insert(key.into(), entry);
-        Ok(())
+        let cmd_id = self.uid_handler.generate_new_id();
+        Ok(cmd_id)
     }
 }
