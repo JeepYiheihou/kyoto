@@ -6,11 +6,13 @@ use bytes::{ BytesMut, BufMut };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::TcpStream;
+use tokio::sync::broadcast;
 
 #[derive(Debug)]
 pub enum ClientType {
     Customer,
     Replication,
+    Primary,
     Unknown,
 }
 
@@ -18,6 +20,8 @@ pub enum ClientType {
 pub struct ClientCollections {
     pub customer_clients: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
     pub replication_clients: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
+    pub primary_probe: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
+    pub primary_probe_signal_tx: broadcast::Sender<i32>,
 }
 
 #[derive(Debug)]
@@ -27,23 +31,28 @@ pub struct Client {
 }
 
 impl ClientCollections {
-    pub fn new() -> Self {
+    pub fn new(primary_probe_signal_tx: broadcast::Sender<i32>) -> Self {
         let customer_clients = std::sync::Mutex::new(HashMap::new());
         let replication_clients = std::sync::Mutex::new(HashMap::new());
+        let primary_client = std::sync::Mutex::new(HashMap::new());
 
         Self {
             customer_clients: customer_clients,
             replication_clients: replication_clients,
+            primary_probe: primary_client,
+            primary_probe_signal_tx: primary_probe_signal_tx,
         }
     }
 
-    /* Add pointer to client to server's client collections. Note that from the very start of
+    /* 
+     * Add pointer to client to server's client collections. Note that from the very start of
      * accepting a connection, all clients are added to customer hashmap, since we cannot tell if it
      * is indeed customer or replication client without data transfer. But after data transfer, we will
      * be able to tell it.
      * 
      * So, when we decide to add a replication client, it means that it is already in customer hashmap. We
-     * have to evict it first from customer hashmap, and then add it to actual replication hashmap. */
+     * have to evict it first from customer hashmap, and then add it to actual replication hashmap. 
+     */
      pub fn add_client(&self, client: Arc<tokio::sync::Mutex<Client>>, client_type: ClientType, fd: i32) {
         match client_type {
             ClientType::Customer => {
@@ -62,6 +71,16 @@ impl ClientCollections {
                     clients.insert(fd, client);
                 }
             },
+            ClientType::Primary => {
+                /* Evict existing primary client from primary hashmap first. */
+                self.evict_client(&ClientType::Primary, fd);
+
+                /* And then add to primary hashmap. */
+                let mut clients = self.primary_probe.lock().unwrap();
+                if !clients.contains_key(&fd) {
+                    clients.insert(fd, client);
+                }
+            }
             ClientType::Unknown => { return },
         }
     }
@@ -80,6 +99,11 @@ impl ClientCollections {
                     clients.remove(&fd);
                 }
              },
+            ClientType::Primary => {
+                /* Iterate the old primary and broadcast to notify. */
+                let mut clients = self.primary_probe.lock().unwrap();
+                clients.clear();
+            }
             ClientType::Unknown => { return }
         }
     }
@@ -126,9 +150,9 @@ impl Client {
     }
 }
 
-pub fn get_client_type(cmd: &Command) -> ClientType {
+pub fn get_client_type_from_commad(cmd: &Command) -> ClientType {
     match cmd {
-        Command::ReplPing { id } => {
+        Command::ReplPing { id: _ } => {
             return ClientType::Replication;
         }
         _ => {

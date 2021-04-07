@@ -22,9 +22,6 @@ pub mod uid;
 /* Data structures supported by kyoto. */
 pub mod server_config;
 
-/* ReplicationConfig structure for replication data. */
-pub mod replication_config;
-
 /* Expose Server struct. */
 pub type Server = server::Server;
 

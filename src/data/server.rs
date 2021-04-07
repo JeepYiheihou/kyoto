@@ -4,6 +4,7 @@ use crate::data::ClientCollections;
 use crate::data::Db;
 
 use std::sync::Arc;
+use tokio::sync::broadcast;
 
 #[derive(Debug, Clone)]
 pub struct Server {
@@ -20,7 +21,8 @@ pub struct Server {
 impl Server {
     pub fn new(params: Params) -> Self {
         let server_config = Arc::new(std::sync::Mutex::new(ServerConfig::new(&params)));
-        let client_collections = Arc::new(ClientCollections::new()); 
+        let (primary_probe_signal_tx, _) = broadcast::channel(16);
+        let client_collections = Arc::new(ClientCollections::new(primary_probe_signal_tx)); 
         let db = Arc::new(Db::new());
         Self {
             server_config: server_config,

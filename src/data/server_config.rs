@@ -1,15 +1,20 @@
 use crate::Result;
-use crate::data::replication_config::ReplicationConfig;
 use crate::data::Params;
 use crate::data::constants::{ DEFAULT_PORT, DEFAULT_INPUT_BUFFER_SIZE };
 
 use bytes::{ BytesMut, BufMut };
 
 #[derive(Debug)]
+pub enum ReplicationRole {
+    Primary,
+    Replica,
+}
+
+#[derive(Debug)]
 pub struct ServerConfig {
     pub port: u16,
     pub input_buffer_size: usize,
-    pub replication_config: ReplicationConfig,
+    pub replication_role: ReplicationRole,
 }
 
 impl ServerConfig {
@@ -21,11 +26,10 @@ impl ServerConfig {
         let input_buffer_size_str = params.input_buffer_size.as_deref().unwrap_or(DEFAULT_INPUT_BUFFER_SIZE);
         let input_buffer_size = input_buffer_size_str.parse::<usize>().unwrap();
 
-        let replication_config = ReplicationConfig::new();
         Self {
             port: port,
             input_buffer_size: input_buffer_size,
-            replication_config: replication_config,
+            replication_role: ReplicationRole::Primary,
         }
     }
 
