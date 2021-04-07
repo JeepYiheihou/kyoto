@@ -72,9 +72,6 @@ impl ClientCollections {
                 }
             },
             ClientType::Primary => {
-                /* Evict existing primary client from primary hashmap first. */
-                self.evict_client(&ClientType::Primary, fd);
-
                 /* And then add to primary hashmap. */
                 let mut clients = self.primary_probe.lock().unwrap();
                 if !clients.contains_key(&fd) {
@@ -118,6 +115,10 @@ impl ClientCollections {
                 let clients = self.replication_clients.lock().unwrap();
                 Ok(clients.len())
             },
+            ClientType::Primary => {
+                let clients = self.primary_probe.lock().unwrap();
+                Ok(clients.len())
+            }
             _ => {
                 Err("Invalid client type given when getting client number.".into())
             }

@@ -100,9 +100,11 @@ pub async fn execute_repl_join_cmd(client: &Client,
         
         /* 2. Evict old primary and add new primary. Old primary node will be disconnected by sending
          * primary_probe_signal message. */
-        {
-            server.client_collections.add_client(primary_client.clone(), ClientType::Primary, fd);
+        if server.client_collections.get_client_number(ClientType::Primary)? > 0 {
+            server.client_collections.primary_probe_signal_tx.send(0)?;
         }
+        server.client_collections.evict_client(&ClientType::Primary, 0);
+        server.client_collections.add_client(primary_client.clone(), ClientType::Primary, fd);
 
         /* TODO Then send a REPL_PING command to primary node. */
 
