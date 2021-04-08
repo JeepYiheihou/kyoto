@@ -5,7 +5,7 @@ use crate::data::{ ClientType, Client };
 use crate::data::client::get_client_type_from_commad;
 use crate::data::Server;
 use crate::machine::execute_command;
-use crate::network::socket_io::{ send_response, send_request };
+use crate::network::socket_io::send_response;
 
 use bytes::{ Bytes };
 use std::os::unix::io::AsRawFd;
@@ -31,11 +31,10 @@ pub async fn handle_buffer(client: Arc<Client>, server: Arc<Server>) -> Result<(
 }
 
 async fn handle_command(client: Arc<Client>, server: Arc<Server>, mut command: Command) -> Result<()> {
-    let client_clone = client.clone();
-    let response = execute_command(client_clone, server.clone(), &mut command).await?;
+    let response = execute_command(client.clone(), server.clone(), &mut command).await?;
     match response {
         Response::Valid { message } => {
-            replicate_command(server.clone(), &command).await?;
+            replicate_command(server.clone(), Arc::new(command)).await?;
             let encoded_response = encode::generate_response(message, 200)?;
             send_response(client, encoded_response).await?;
             Ok(())
@@ -88,17 +87,11 @@ async fn execute_command(client: Arc<Client>, server: Arc<Server>, cmd: &mut Com
     }
 }
 
-async fn replicate_command(server: Arc<Server>, cmd: &Command) -> Result<()> {
-    let payload = encode::generate_request(cmd)?;
-    match payload {
-        Some(message) => {
-            let replicas_map = server.client_collections.replication_clients.lock().await;
-            // for val in replicas_map.values() {
-            //     let mut replica = val.lock().await;
-            //     send_request(&mut replica, &message).await?;
-            // }
-        },
-        None => { }
+async fn replicate_command(server: Arc<Server>, cmd: Arc<Command>) -> Result<()> {
+    let replicas_map = server.client_collections.replication_clients.lock().await;
+    for replica in replicas_map.values() {
+        let tx = replica.signal_tx.lock().await;
+        tx.send(cmd.clone()).await?;
     }
     Ok(())
 }

@@ -5,6 +5,7 @@ use crate::data::{ ClientType, Client };
 use crate::data::client::get_client_type_from_commad;
 use crate::data::Server;
 use crate::machine::execute_command;
+use crate::network::socket_io::clear_buffer;
 
 use std::os::unix::io::AsRawFd;
 use std::sync::{ Arc };
@@ -17,6 +18,7 @@ pub async fn handle_buffer_primary_probe(client: Arc<Client>, server: Arc<Server
     };
     match res {
         Some(command) => {
+            println!("handler command from primary!");
             let client_type = get_client_type_from_commad(&command);
             handle_command_primary_probe(client, server, command).await?;
             return Ok((client_type, fd));
@@ -29,9 +31,10 @@ pub async fn handle_buffer_primary_probe(client: Arc<Client>, server: Arc<Server
 }
 
 async fn handle_command_primary_probe(client: Arc<Client>, server: Arc<Server>, mut command: Command) -> Result<()> {
-    let response = execute_command_primary_probe(client, server, &mut command).await?;
+    let response = execute_command_primary_probe(client.clone(), server, &mut command).await?;
     match response {
         Response::Valid {..} => {
+            clear_buffer(client.clone()).await?;
             Ok(())
         },
         Response::Error { error_type, message } => {

@@ -31,7 +31,7 @@ pub async fn listen(server: Server) -> Result<()> {
                                       input_buffer_size));
                 let server = Arc::new(server.clone());
                 tokio::spawn(async move {
-                    if let Err(err) = socket_io::handle_socket_buffer(client, server).await {
+                    if let Err(err) = socket_io::handle_client(client, server).await {
                         error!(cause = ?err, "client handling error")
                     }
                 });

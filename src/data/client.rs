@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::{ Mutex, broadcast, mpsc };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ClientType {
     Customer,
     Replication,
@@ -28,7 +28,8 @@ pub struct ClientCollections {
 pub struct Client {
     pub client_type: Mutex<ClientType>,
     pub connection: Mutex<Connection>,
-    pub signal_rx: Mutex<Option<mpsc::Receiver<Command>>>,
+    pub signal_rx: Mutex<mpsc::Receiver<Arc<Command>>>,
+    pub signal_tx: Mutex<mpsc::Sender<Arc<Command>>>,
 }
 
 impl ClientCollections {
@@ -145,29 +146,18 @@ impl ClientCollections {
 
 impl Client {
     pub fn new(client_type: ClientType, stream: TcpStream, input_buffer_size: usize) -> Self {
+        let (tx, rx) = mpsc::channel(1024);
         Self {
             client_type: Mutex::new(client_type),
             connection: Mutex::new(Connection::new(stream, input_buffer_size)),
-            signal_rx: Mutex::new(None),
+            signal_rx: Mutex::new(rx),
+            signal_tx: Mutex::new(tx),
         }
     }
 
     pub async fn get_type(&self) -> ClientType {
         let client_type = self.client_type.lock().await;
-        match *client_type {
-            ClientType::Customer => {
-                ClientType::Customer
-            },
-            ClientType::Primary => {
-                ClientType::Primary
-            },
-            ClientType::Replication => {
-                ClientType::Replication
-            },
-            ClientType::Unknown => {
-                ClientType::Unknown
-            }
-        }
+        client_type.clone()
     }
 
     pub async fn set_type(&self, new_client_type: ClientType) -> Result<()> {

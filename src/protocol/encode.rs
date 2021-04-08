@@ -1,6 +1,7 @@
 use crate::protocol::Command;
 
 use bytes::{ Bytes, BytesMut, BufMut };
+use std::sync::Arc;
 
 pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
     /* Generate status code and header for the response. */
@@ -15,8 +16,8 @@ pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
     Ok(response.freeze())
 }
 
-pub fn generate_request(cmd: &Command) -> crate::Result<Option<Bytes>> {
-    let body = match cmd {
+pub fn generate_request(cmd: Arc<Command>) -> crate::Result<Option<Bytes>> {
+    let body = match cmd.as_ref() {
         Command::Set {..} => {
             generate_set_request_body(cmd)?
         },
@@ -32,11 +33,13 @@ pub fn generate_request(cmd: &Command) -> crate::Result<Option<Bytes>> {
     Ok(Some(Bytes::from(request)))
 }
 
-fn generate_set_request_body(cmd: &Command) -> crate::Result<Bytes> {
-    if let Command::Set{ key, value, id } = cmd {
-        let body = 
-            format!("{{\"command\":\"SET\",\"key\":{},\"value\":{:?},\"id\":{}}}",
-            key, value, id);
+fn generate_set_request_body(cmd: Arc<Command>) -> crate::Result<Bytes> {
+    if let Command::Set{ key, value, id } = cmd.as_ref() {
+        let body = [
+            Bytes::from(format!("{{\"command\":\"SET\",\"key\":\"{}\",\"value\":\"", key)),
+            value.clone(),
+            Bytes::from(format!("\",\"id\":{}}}", id))
+        ].concat();
         return Ok(Bytes::from(body));
     }
     /* Actually this shouldn't have happened because we have filtered command type
@@ -44,8 +47,8 @@ fn generate_set_request_body(cmd: &Command) -> crate::Result<Bytes> {
     Err("Invalid command type".into())
 }
 
-fn generate_repl_ping_request_body(cmd: &Command) -> crate::Result<Bytes> {
-    if let Command::ReplPing{ id } = cmd {
+fn generate_repl_ping_request_body(cmd: Arc<Command>) -> crate::Result<Bytes> {
+    if let Command::ReplPing{ id } = cmd.as_ref() {
         let body = 
             format!("{{\"command\":\"REPL_PING\",\"id\":{}}}", id);
         return Ok(Bytes::from(body));
