@@ -1,62 +1,72 @@
 use crate::Result;
+use crate::protocol::encode;
+use crate::protocol::Command;
 use crate::data::Server;
 use crate::data::{ Client, ClientType };
-use crate::machine::handle_command_client;
-use crate::machine::handle_command_primary_probe;
+use crate::machine::handle_client;
+use crate::machine::handle_primary_probe;
 
 use bytes::Bytes;
 use std::os::unix::io::AsRawFd;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::{ Mutex, broadcast };
+use tokio::sync::broadcast;
 
-pub async fn handle_socket_buffer(client: Arc<Mutex<Client>>, server: Arc<Server>) -> Result<()> {
+pub async fn handle_socket_buffer(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
     let client_clone = client.clone();
     let fd = {
-        let c = client_clone.lock().await;
-        c.connection.socket.as_raw_fd()
+        let conn = client_clone.connection.lock().await;
+        conn.socket.as_raw_fd()
     };
-    server.client_collections.add_client(client_clone, ClientType::Customer, fd);
+    server.client_collections.add_client(client_clone, ClientType::Customer, fd).await;
     loop {
+        let client_clone = client.clone();
         /* Socket read */
-        let (client_type, fd) = {
-            let c = &mut client.lock().await;
-            let conn = &mut c.connection;
+        {
+            let conn = &mut client.connection.lock().await;
             let read_count = conn.read_to_buf().await?;
             /* Handle read errors. */
             if read_count == 0 {
                 let evict_fd = conn.socket.as_raw_fd();
+                let client_type = &client.get_type().await;
                 if conn.buffer.is_empty() {
-                    server.client_collections.evict_client(&c.client_type, evict_fd);
+                    server.client_collections.evict_client(client_type, evict_fd).await;
                     return Ok(());
                 } else {
-                    server.client_collections.evict_client(&c.client_type, evict_fd);
+                    server.client_collections.evict_client(client_type, evict_fd).await;
                     return Err("connection reset by peer".into());
                 }
             }
-            // println!("{:?}", &conn.buffer);
-            handle_command_client::handle_buffer(c, server.clone()).await?
+            println!("Buffer from client: {:?}", &conn.buffer);
         };
+
+        let (client_type, fd) = handle_client::handle_buffer(client_clone, server.clone()).await?;
+
 
         /* Now check client type. If it's a ClientType::Replication, then we add it to
          * the */
         match client_type {
             ClientType::Replication => {
                 {
-                    let c = &mut client.lock().await;
-                    c.client_type = ClientType::Replication;
+                    client.set_type(ClientType::Replication).await?; 
                 }
                 let client_clone = client.clone();
-                server.client_collections.add_client(client_clone, client_type, fd);
+                server.client_collections.add_client(client_clone, client_type, fd).await;
             },
             _ => {}
         }
     }
 }
 
-pub async fn handle_primary_probe(client: Arc<Mutex<Client>>,
+pub async fn handle_primary_probe(client: Arc<Client>,
                                   server: Arc<Server>,
                                   mut primary_probe_signal_rx: broadcast::Receiver<i32>) -> Result<()> {
+    /* First of all, send REPL_PING to primary. */
+    {
+        let cmd = Command::ReplPing{id: 0};
+        let repl_ping_msg = encode::generate_request(&cmd)?.unwrap();
+        send_request(client.clone(), &repl_ping_msg).await?;
+    }
     loop {
         let client_clone = client.clone();
         let server_clone = server.clone();
@@ -73,35 +83,40 @@ pub async fn handle_primary_probe(client: Arc<Mutex<Client>>,
     }
 }
 
-async fn handle(client: Arc<Mutex<Client>>, server: Arc<Server>) -> Result<()> {
+async fn handle(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
     /* Socket read */
-    let (client_type, fd) = {
-        println!("Started primary loop");
-        let c = &mut client.lock().await;
-        let conn = &mut c.connection;
-        let read_count = conn.read_to_buf().await?;
-        /* Handle read errors. */
-        if read_count == 0 {
-            let evict_fd = conn.socket.as_raw_fd();
-            if conn.buffer.is_empty() {
-                server.client_collections.evict_client(&c.client_type, evict_fd);
-                return Ok(());
-            } else {
-                server.client_collections.evict_client(&c.client_type, evict_fd);
-                return Err("connection reset by peer".into());
-            }
+    println!("Started primary loop");
+    let conn = &mut client.connection.lock().await;
+    let read_count = conn.read_to_buf().await?;
+    /* Handle read errors. */
+    if read_count == 0 {
+        let evict_fd = conn.socket.as_raw_fd();
+        let client_type = &client.get_type().await;
+        if conn.buffer.is_empty() {
+            server.client_collections.evict_client(client_type, evict_fd).await;
+            return Err("connection closed".into());
+        } else {
+            server.client_collections.evict_client(client_type, evict_fd).await;
+            return Err("connection reset by peer".into());
         }
-        // println!("{:?}", &conn.buffer);
-        handle_command_primary_probe::handle_buffer_primary_probe(c, server.clone()).await?
-    };
+    }
+    println!("Buffer from primary: {:?}", &conn.buffer);
+    handle_primary_probe::handle_buffer_primary_probe(client.clone(), server.clone()).await?;
 
     Ok(())
 }
 
-pub async fn send_response(client: &mut Client, message: Bytes) -> Result<()> {
-    let conn = &mut client.connection;
+pub async fn send_response(client: Arc<Client>, message: Bytes) -> Result<()> {
+    let mut conn = client.connection.lock().await;
     conn.buffer.clear();
     conn.socket.write_all(&message).await?;
+    conn.socket.flush().await?;
+    Ok(())
+}
+
+pub async fn send_request(client: Arc<Client>, message: &Bytes) -> Result<()> {
+    let mut conn = client.connection.lock().await;
+    conn.socket.write_all(message).await?;
     conn.socket.flush().await?;
     Ok(())
 }

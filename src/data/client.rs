@@ -6,7 +6,7 @@ use bytes::{ BytesMut, BufMut };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio::sync::broadcast;
+use tokio::sync::{ Mutex, broadcast };
 
 #[derive(Debug)]
 pub enum ClientType {
@@ -18,23 +18,23 @@ pub enum ClientType {
 
 #[derive(Debug)]
 pub struct ClientCollections {
-    pub customer_clients: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
-    pub replication_clients: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
-    pub primary_probe: std::sync::Mutex<HashMap<i32, Arc<tokio::sync::Mutex<Client>>>>,
+    pub customer_clients: Mutex<HashMap<i32, Arc<Client>>>,
+    pub replication_clients: Mutex<HashMap<i32, Arc<Client>>>,
+    pub primary_probe: Mutex<HashMap<i32, Arc<Client>>>,
     pub primary_probe_signal_tx: broadcast::Sender<i32>,
 }
 
 #[derive(Debug)]
 pub struct Client {
-    pub client_type: ClientType,
-    pub connection: Connection,
+    pub client_type: Mutex<ClientType>,
+    pub connection: Mutex<Connection>,
 }
 
 impl ClientCollections {
     pub fn new(primary_probe_signal_tx: broadcast::Sender<i32>) -> Self {
-        let customer_clients = std::sync::Mutex::new(HashMap::new());
-        let replication_clients = std::sync::Mutex::new(HashMap::new());
-        let primary_client = std::sync::Mutex::new(HashMap::new());
+        let customer_clients = Mutex::new(HashMap::new());
+        let replication_clients = Mutex::new(HashMap::new());
+        let primary_client = Mutex::new(HashMap::new());
 
         Self {
             customer_clients: customer_clients,
@@ -53,27 +53,27 @@ impl ClientCollections {
      * So, when we decide to add a replication client, it means that it is already in customer hashmap. We
      * have to evict it first from customer hashmap, and then add it to actual replication hashmap. 
      */
-     pub fn add_client(&self, client: Arc<tokio::sync::Mutex<Client>>, client_type: ClientType, fd: i32) {
+     pub async fn add_client(&self, client: Arc<Client>, client_type: ClientType, fd: i32) {
         match client_type {
             ClientType::Customer => {
-                let mut clients = self.customer_clients.lock().unwrap();
+                let mut clients = self.customer_clients.lock().await;
                 if !clients.contains_key(&fd) {
                     clients.insert(fd, client);
                 }
             },
             ClientType::Replication => {
                 /* Evict from customer hashmap first. */
-                self.evict_client(&ClientType::Customer, fd);
+                self.evict_client(&ClientType::Customer, fd).await;
 
                 /* And then add to replication hashmap. */
-                let mut clients = self.replication_clients.lock().unwrap();
+                let mut clients = self.replication_clients.lock().await;
                 if !clients.contains_key(&fd) {
                     clients.insert(fd, client);
                 }
             },
             ClientType::Primary => {
                 /* And then add to primary hashmap. */
-                let mut clients = self.primary_probe.lock().unwrap();
+                let mut clients = self.primary_probe.lock().await;
                 if !clients.contains_key(&fd) {
                     clients.insert(fd, client);
                 }
@@ -82,41 +82,41 @@ impl ClientCollections {
         }
     }
 
-    pub fn evict_client(&self, client_type: &ClientType, fd: i32) {
+    pub async fn evict_client(&self, client_type: &ClientType, fd: i32) {
         match client_type {
             ClientType::Customer => {
-                let mut clients = self.customer_clients.lock().unwrap();
+                let mut clients = self.customer_clients.lock().await;
                 if clients.contains_key(&fd) {
                     clients.remove(&fd);
                 }
             },
             ClientType::Replication => { 
-                let mut clients = self.replication_clients.lock().unwrap();
+                let mut clients = self.replication_clients.lock().await;
                 if clients.contains_key(&fd) {
                     clients.remove(&fd);
                 }
              },
             ClientType::Primary => {
                 /* Iterate the old primary and broadcast to notify. */
-                let mut clients = self.primary_probe.lock().unwrap();
+                let mut clients = self.primary_probe.lock().await;
                 clients.clear();
             }
             ClientType::Unknown => { return }
         }
     }
 
-    pub fn get_client_number(&self, client_type: ClientType) -> Result<usize> {
+    pub async fn get_client_number(&self, client_type: ClientType) -> Result<usize> {
         match client_type {
             ClientType::Customer => {
-                let clients = self.customer_clients.lock().unwrap();
+                let clients = self.customer_clients.lock().await;
                 Ok(clients.len())
             },
             ClientType::Replication => {
-                let clients = self.replication_clients.lock().unwrap();
+                let clients = self.replication_clients.lock().await;
                 Ok(clients.len())
             },
             ClientType::Primary => {
-                let clients = self.primary_probe.lock().unwrap();
+                let clients = self.primary_probe.lock().await;
                 Ok(clients.len())
             }
             _ => {
@@ -125,14 +125,14 @@ impl ClientCollections {
         }
     }
 
-    pub fn generate_info(&self, mut info: BytesMut) -> Result<BytesMut> {
+    pub async fn generate_info(&self, mut info: BytesMut) -> Result<BytesMut> {
         info.put("[Client info]\r\n".as_bytes());
 
-        let customer_clients_num = self.get_client_number(ClientType::Customer)?;
+        let customer_clients_num = self.get_client_number(ClientType::Customer).await?;
         let customer_clients_info = format!("customer client num: {}\r\n", customer_clients_num);
         info.put(customer_clients_info.as_bytes());
 
-        let replication_clients_num = self.get_client_number(ClientType::Replication)?;
+        let replication_clients_num = self.get_client_number(ClientType::Replication).await?;
         let replication_clients_info = format!("replication client num: {}\r\n", replication_clients_num);
         info.put(replication_clients_info.as_bytes());
 
@@ -145,9 +145,33 @@ impl ClientCollections {
 impl Client {
     pub fn new(client_type: ClientType, stream: TcpStream, input_buffer_size: usize) -> Self {
         Self {
-            client_type: client_type,
-            connection: Connection::new(stream, input_buffer_size),
+            client_type: Mutex::new(client_type),
+            connection: Mutex::new(Connection::new(stream, input_buffer_size)),
         }
+    }
+
+    pub async fn get_type(&self) -> ClientType {
+        let client_type = self.client_type.lock().await;
+        match *client_type {
+            ClientType::Customer => {
+                ClientType::Customer
+            },
+            ClientType::Primary => {
+                ClientType::Primary
+            },
+            ClientType::Replication => {
+                ClientType::Replication
+            },
+            ClientType::Unknown => {
+                ClientType::Unknown
+            }
+        }
+    }
+
+    pub async fn set_type(&self, new_client_type: ClientType) -> Result<()> {
+        let mut client_type = self.client_type.lock().await;
+        *client_type = new_client_type;
+        Ok(())
     }
 }
 

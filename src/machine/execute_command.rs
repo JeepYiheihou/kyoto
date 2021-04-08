@@ -7,11 +7,10 @@ use bytes::{ BytesMut };
 use std::os::unix::io::AsRawFd;
 use std::sync::{ Arc };
 use tokio::net::{ TcpStream };
-use tokio::sync::Mutex;
 use tracing::error;
 
 /* Execute the GET command. */
-pub fn execute_get_cmd(_client: &Client,
+pub fn execute_get_cmd(_client: Arc<Client>,
                     server: Arc<Server>,
                     cmd: &Command) -> crate::Result<Response> {
     let result = if let Command::Get { key, id: _ } = cmd {
@@ -36,7 +35,7 @@ pub fn execute_get_cmd(_client: &Client,
 }
 
 /* Execute the SET command. */
-pub fn execute_set_cmd(_client: &Client,
+pub fn execute_set_cmd(_client: Arc<Client>,
                     server: Arc<Server>,
                     cmd: &mut Command)-> crate::Result<Response> {
     let result = if let Command::Set { key, value, id } = cmd {
@@ -52,7 +51,7 @@ pub fn execute_set_cmd(_client: &Client,
 }
 
 /* Execute the INFO command. */
-pub fn execute_info_cmd(_client: &Client,
+pub async fn execute_info_cmd(_client: Arc<Client>,
                      server: Arc<Server>,
                      cmd: &Command) -> crate::Result<Response> {
     let result = if let Command::Info { id: _ } = cmd {
@@ -63,7 +62,7 @@ pub fn execute_info_cmd(_client: &Client,
             server_config.generate_info(info)?
         };
     
-        info = server.client_collections.generate_info(info)?;
+        info = server.client_collections.generate_info(info).await?;
     
         let response = Response::Valid{ message: info.freeze() };
         Ok(response)
@@ -75,10 +74,10 @@ pub fn execute_info_cmd(_client: &Client,
 }
 
 /* Execute the REPL_JOIN command. */
-pub async fn execute_repl_join_cmd(client: &Client,
-                          server: Arc<Server>,
-                          cmd: &Command) -> crate::Result<Response> {
-    if let ClientType::Primary = client.client_type {
+pub async fn execute_repl_join_cmd(client: Arc<Client>,
+                                   server: Arc<Server>,
+                                   cmd: &Command) -> crate::Result<Response> {
+    if let ClientType::Primary = client.get_type().await {
         return Err("Cannot do join from primary probe client".into());
     }
     let result = if let Command::ReplJoin { addr, port, id: _ } = cmd {
@@ -96,23 +95,21 @@ pub async fn execute_repl_join_cmd(client: &Client,
             let server_config = server.server_config.lock().unwrap();
             server_config.input_buffer_size
         };
-        let primary_client = Arc::new(Mutex::new(Client::new(ClientType::Primary, stream, input_buffer_size)));
+        let primary_client = Arc::new(Client::new(ClientType::Primary, stream, input_buffer_size));
         
         /* 2. Evict old primary and add new primary. Old primary node will be disconnected by sending
          * primary_probe_signal message. */
-        if server.client_collections.get_client_number(ClientType::Primary)? > 0 {
+        if server.client_collections.get_client_number(ClientType::Primary).await? > 0 {
             server.client_collections.primary_probe_signal_tx.send(0)?;
         }
-        server.client_collections.evict_client(&ClientType::Primary, 0);
-        server.client_collections.add_client(primary_client.clone(), ClientType::Primary, fd);
-
-        /* TODO Then send a REPL_PING command to primary node. */
+        server.client_collections.evict_client(&ClientType::Primary, 0).await;
+        server.client_collections.add_client(primary_client.clone(), ClientType::Primary, fd).await;
 
         /* 3. Start primary worker job. */
         let primary_probe_signal_rx = server.client_collections.primary_probe_signal_tx.subscribe();
         tokio::spawn(async move {
             if let Err(err) = handle_primary_probe(primary_client, server, primary_probe_signal_rx).await {
-                error!(cause = ?err, "primary probe error")
+                error!(cause = ?err, "primary probe handling error")
             }
         });
 
@@ -125,8 +122,16 @@ pub async fn execute_repl_join_cmd(client: &Client,
     result
 }
 
+/* Execute the REPL_PING command. */
+/* For now just do nothing. In the future consider sending PONG message. */
+pub fn execute_repl_ping_cmd(_client: Arc<Client>,
+                             _server: Arc<Server>,
+                             _cmd: &Command) -> crate::Result<Response> {
+    Ok(Response::None)
+}
+
 /* Handle bad shaped command. */
-pub fn handle_bad_cmd(_client: &Client,
+pub fn handle_bad_cmd(_client: Arc<Client>,
                    _server: Arc<Server>,
                    cmd: &Command) -> crate::Result<Response> {
     let result = if let Command::BadCommand { message } = cmd {

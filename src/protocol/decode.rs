@@ -4,6 +4,7 @@ use bytes::{ Bytes, BytesMut };
 use serde_json::Value;
 
 pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
+    println!("parsing here");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
     let status = req.parse(&buffer)?;
@@ -27,6 +28,8 @@ pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
                 parse_info_command(json_body)
             } else if command == "REPL_JOIN" {
                 parse_repl_join_command(json_body)
+            } else if command == "REPL_PING"{
+                parse_repl_ping_command(json_body)
             } else {
                 /* Invalid command name. */
                 let msg = String::from("Invalid command name");
@@ -136,4 +139,10 @@ fn parse_repl_join_command(json_body: Value) -> crate::Result<Option<Command>> {
     let id = parse_id(&json_body);
 
     Ok(Command::ReplJoin{ addr: addr, port: port, id: id }.into())
+}
+
+/* Parsing REPL_PING command. */
+fn parse_repl_ping_command(json_body: Value) -> crate::Result<Option<Command>> {
+    let id = parse_id(&json_body);
+    Ok(Command::ReplPing{ id: id }.into())
 }

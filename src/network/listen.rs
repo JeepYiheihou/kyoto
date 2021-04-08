@@ -5,7 +5,6 @@ use crate::network::socket_io;
 
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tracing::error;
 
 /* The actual entry point to start the accept server.
@@ -27,13 +26,13 @@ pub async fn listen(server: Server) -> Result<()> {
                  * Client is created at connection being accepted. At this moment we don't know
                  * whether the client is a customer client or replication client. So we default it
                  * to be customer. */
-                let client = Arc::new(Mutex::new(Client::new(ClientType::Customer,
+                let client = Arc::new(Client::new(ClientType::Customer,
                                       stream,
-                                      input_buffer_size)));
+                                      input_buffer_size));
                 let server = Arc::new(server.clone());
                 tokio::spawn(async move {
                     if let Err(err) = socket_io::handle_socket_buffer(client, server).await {
-                        error!(cause = ?err, "connection error")
+                        error!(cause = ?err, "client handling error")
                     }
                 });
             },

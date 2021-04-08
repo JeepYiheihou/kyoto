@@ -15,28 +15,24 @@ pub fn generate_response(val: Bytes, erorr_code: u16) -> crate::Result<Bytes> {
     Ok(response.freeze())
 }
 
-pub fn generate_request(cmd: Command) -> crate::Result<Bytes> {
-    let body = generate_request_body(cmd)?;
-    let header = format!("POST / HTTP/1.1\r\nContent-Type: application/json\r\nConnection: keep-alive\r\nContent-Length: {}\r\n\r\n", body.len());
-    let request = format!("{}{:?}", header, body);
-    Ok(Bytes::from(request))
-}
-
-fn generate_request_body(cmd: Command) -> crate::Result<Bytes> {
-    match cmd {
-        Command::Set{..} => {
-            generate_set_request_body(cmd)
+pub fn generate_request(cmd: &Command) -> crate::Result<Option<Bytes>> {
+    let body = match cmd {
+        Command::Set {..} => {
+            generate_set_request_body(cmd)?
         },
-        Command::ReplPing{..} => {
-            generate_repl_join_request_body(cmd)
-        },
-        _ => {
-            Err("Not supported command type for encoding.".into())
+        Command::ReplPing {..} => {
+            generate_repl_ping_request_body(cmd)?
         }
-    }
+        _ => {
+            return Ok(None);
+        }
+    };
+    let header = format!("POST / HTTP/1.1\r\nContent-Type: application/json\r\nConnection: keep-alive\r\nContent-Length: {}\r\n\r\n", body.len());
+    let request = [Bytes::from(header), body].concat();
+    Ok(Some(Bytes::from(request)))
 }
 
-fn generate_set_request_body(cmd: Command) -> crate::Result<Bytes> {
+fn generate_set_request_body(cmd: &Command) -> crate::Result<Bytes> {
     if let Command::Set{ key, value, id } = cmd {
         let body = 
             format!("{{\"command\":\"SET\",\"key\":{},\"value\":{:?},\"id\":{}}}",
@@ -48,7 +44,7 @@ fn generate_set_request_body(cmd: Command) -> crate::Result<Bytes> {
     Err("Invalid command type".into())
 }
 
-fn generate_repl_join_request_body(cmd: Command) -> crate::Result<Bytes> {
+fn generate_repl_ping_request_body(cmd: &Command) -> crate::Result<Bytes> {
     if let Command::ReplPing{ id } = cmd {
         let body = 
             format!("{{\"command\":\"REPL_PING\",\"id\":{}}}", id);
