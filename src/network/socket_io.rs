@@ -78,7 +78,6 @@ async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Re
                 return Err("connection reset by peer".into());
             }
         }
-        println!("Buffer from client: {:?}", &conn.buffer);
     };
 
     let (client_type, fd) = handle_client::handle_buffer(client_clone, server.clone()).await?;
@@ -100,7 +99,6 @@ async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Re
 
 async fn handle_socket_io_primary_probe(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
     /* Socket read */
-    println!("Started primary loop");
     {
         let conn = &mut client.connection.lock().await;
         let read_count = conn.read_to_buf().await?;
@@ -116,7 +114,6 @@ async fn handle_socket_io_primary_probe(client: Arc<Client>, server: Arc<Server>
                 return Err("connection reset by peer".into());
             }
         }
-        println!("Buffer from primary: {:?}", &conn.buffer);
     }
     handle_primary_probe::handle_buffer_primary_probe(client.clone(), server.clone()).await?;
     Ok(())

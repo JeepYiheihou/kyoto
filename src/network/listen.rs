@@ -12,7 +12,7 @@ use tracing::error;
 #[tokio::main]
 pub async fn listen(server: Server) -> Result<()> {
     let (port, input_buffer_size) = {
-        let server_config = server.server_config.lock().unwrap();
+        let server_config = server.server_config.read();
         (server_config.port, server_config.input_buffer_size)
     };
     let listener = TcpListener::bind(&format!("127.0.0.1:{}", port)).await?;

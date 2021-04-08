@@ -3,12 +3,13 @@ use crate::data::Params;
 use crate::data::ClientCollections;
 use crate::data::Db;
 
+use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone)]
 pub struct Server {
-    pub server_config: Arc<std::sync::Mutex<ServerConfig>>,
+    pub server_config: Arc<RwLock<ServerConfig>>,
     pub client_collections: Arc<ClientCollections>,
     pub db: Arc<Db>,
 }
@@ -20,7 +21,7 @@ pub struct Server {
  * This is only for Arc, not for Mutex. Locks need to be handled separately. */
 impl Server {
     pub fn new(params: Params) -> Self {
-        let server_config = Arc::new(std::sync::Mutex::new(ServerConfig::new(&params)));
+        let server_config = Arc::new(RwLock::new(ServerConfig::new(&params)));
         let (primary_probe_signal_tx, _) = broadcast::channel(16);
         let client_collections = Arc::new(ClientCollections::new(primary_probe_signal_tx)); 
         let db = Arc::new(Db::new());

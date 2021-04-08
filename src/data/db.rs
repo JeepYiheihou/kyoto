@@ -1,8 +1,8 @@
 use crate::data::UIDHandler;
 
 use bytes::Bytes;
+use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 #[derive(Debug, Clone)]
 struct Entry {
@@ -14,7 +14,7 @@ struct Entry {
  * contains is an Arc of the actual data structures. */
 #[derive(Debug)]
 pub struct Db {
-    hashmap: Mutex<HashMap<String, Entry>>,
+    hashmap: RwLock<HashMap<String, Entry>>,
     uid_handler: UIDHandler,
 
 }
@@ -22,18 +22,18 @@ pub struct Db {
 impl Db {
     pub fn new() -> Self {
         Db {
-            hashmap: Mutex::new(HashMap::new()),
+            hashmap: RwLock::new(HashMap::new()),
             uid_handler: UIDHandler::new(),
         }
     }
 
     pub fn get(&self, key: &str) -> Option<Bytes> {
-        let state = self.hashmap.lock().unwrap();
+        let state = self.hashmap.read();
         state.get(key).map(|entry| entry.data.clone())
     }
 
     pub fn set(&self, key: &str, val: &Bytes) -> crate::Result<i64> {
-        let mut state = self.hashmap.lock().unwrap();
+        let mut state = self.hashmap.write();
         let entry = Entry {
             data: val.clone(),
         };

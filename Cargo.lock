@@ -145,6 +145,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "httparse",
+ "parking_lot",
  "serde",
  "serde_json",
  "structopt",

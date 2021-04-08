@@ -58,7 +58,7 @@ pub async fn execute_info_cmd(_client: Arc<Client>,
         let mut info = BytesMut::from("");
         /* Get server config info. */
         info = {
-            let server_config = server.server_config.lock().unwrap();
+            let server_config = server.server_config.read();
             server_config.generate_info(info)?
         };
     
@@ -92,7 +92,7 @@ pub async fn execute_repl_join_cmd(client: Arc<Client>,
         };
         let fd = stream.as_raw_fd();
         let input_buffer_size = {
-            let server_config = server.server_config.lock().unwrap();
+            let server_config = server.server_config.read();
             server_config.input_buffer_size
         };
         let primary_client = Arc::new(Client::new(ClientType::Primary, stream, input_buffer_size));
