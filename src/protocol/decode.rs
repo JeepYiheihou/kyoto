@@ -4,7 +4,6 @@ use bytes::{ Bytes, BytesMut };
 use serde_json::Value;
 
 pub fn parse_command(mut buffer: BytesMut) -> crate::Result<Option<Command>> {
-    println!("parsing here");
     let mut headers = [httparse::EMPTY_HEADER; 16];
     let mut req = httparse::Request::new(&mut headers);
     let status = req.parse(&buffer)?;

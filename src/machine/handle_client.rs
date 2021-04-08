@@ -14,7 +14,6 @@ use std::sync::{ Arc };
 pub async fn handle_buffer(client: Arc<Client>, server: Arc<Server>) -> Result<(ClientType, i32)> {
     let (res, fd) = {
         let conn = client.connection.lock().await;
-        println!("after lock!");
         let buffer = conn.buffer.clone();
         (decode::parse_command(buffer)?, conn.socket.as_raw_fd())
     };
@@ -69,7 +68,6 @@ async fn handle_command(client: Arc<Client>, server: Arc<Server>, mut command: C
 async fn execute_command(client: Arc<Client>, server: Arc<Server>, cmd: &mut Command) -> crate::Result<Response> {
     match cmd {
         Command::Get { .. } => {
-            println!("execute here!");
             execute_command::execute_get_cmd(client, server, cmd)
         },
         Command::Set { .. } => {

@@ -16,6 +16,4 @@ or:
 ```
 
 ## Idea
-Modularize.
-
-This project aim to test whether a database can be decoupled into essential modules: Network part, Machine part and Data Structure part.
+Faster, my friend.

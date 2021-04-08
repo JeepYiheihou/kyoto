@@ -6,7 +6,7 @@ use bytes::{ BytesMut, BufMut };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio::sync::{ Mutex, broadcast };
+use tokio::sync::{ Mutex, broadcast, mpsc };
 
 #[derive(Debug)]
 pub enum ClientType {
@@ -28,6 +28,7 @@ pub struct ClientCollections {
 pub struct Client {
     pub client_type: Mutex<ClientType>,
     pub connection: Mutex<Connection>,
+    pub signal_rx: Mutex<Option<mpsc::Receiver<Command>>>,
 }
 
 impl ClientCollections {
@@ -147,6 +148,7 @@ impl Client {
         Self {
             client_type: Mutex::new(client_type),
             connection: Mutex::new(Connection::new(stream, input_buffer_size)),
+            signal_rx: Mutex::new(None),
         }
     }
 
