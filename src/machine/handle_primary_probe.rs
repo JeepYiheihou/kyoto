@@ -18,7 +18,6 @@ pub async fn handle_buffer_primary_probe(client: Arc<Client>, server: Arc<Server
     };
     match res {
         Some(command) => {
-            println!("handler command from primary!");
             let client_type = get_client_type_from_commad(&command);
             handle_command_primary_probe(client, server, command).await?;
             return Ok((client_type, fd));

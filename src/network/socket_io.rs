@@ -80,25 +80,27 @@ async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Re
         }
     };
 
-    let (client_type, fd) = handle_client::handle_buffer(client_clone, server.clone()).await?;
+    // let (client_type, fd) = handle_client::handle_buffer(client_clone, server.clone()).await?;
 
-    /* Now check client type. If it's a ClientType::Replication, then we add it to
-        * the replication hashmap. */
-    match client_type {
-        ClientType::Replication => {
-            {
-                client.set_type(ClientType::Replication).await?;
-            }
-            let client_clone = client.clone();
-            server.client_collections.add_client(client_clone, client_type, fd).await;
-        },
-        _ => {}
-    }
-    Ok(())
+    // /* Now check client type. If it's a ClientType::Replication, then we add it to
+    //     * the replication hashmap. */
+    // match client_type {
+    //     ClientType::Replication => {
+    //         {
+    //             client.set_type(ClientType::Replication).await?;
+    //         }
+    //         let client_clone = client.clone();
+    //         server.client_collections.add_client(client_clone, client_type, fd).await;
+    //     },
+    //     _ => {}
+    // }
+    // Ok(())
+    send_response(client, Bytes::from("yoho!")).await
 }
 
 async fn handle_socket_io_primary_probe(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
     /* Socket read */
+    println!("Started primary loop");
     {
         let conn = &mut client.connection.lock().await;
         let read_count = conn.read_to_buf().await?;
