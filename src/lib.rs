@@ -18,6 +18,8 @@ pub mod data;
  * concept "stage", but used in stages. */
 pub mod protocol;
 
+pub mod benchmark;
+
 /* kyoto Error type. */
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 

@@ -12,6 +12,12 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::broadcast;
 
+#[derive(Debug)]
+enum Status {
+    Looping,
+    Closed,
+}
+
 pub async fn handle_client(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
     let client_clone = client.clone();
     let fd = {
@@ -29,9 +35,15 @@ pub async fn handle_client(client: Arc<Client>, server: Arc<Server>) -> Result<(
                 }
             },
             res = handle_socket_io_client(client.clone(), server_clone) => {
-                if let Err(err) = res {
-                    return Err(err.into());
-                }
+                match res {
+                    Ok(Status::Looping) => {},
+                    Ok(Status::Closed) => {
+                        return Ok(())
+                    },
+                    Err(err) => {
+                        return Err(err.into())
+                    }
+                };
             }
         }
     }
@@ -60,7 +72,7 @@ pub async fn handle_primary_probe(client: Arc<Client>,
     }
 }
 
-async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Result<()> {
+async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Result<Status> {
     let client_clone = client.clone();
     /* Socket read */
     {
@@ -72,7 +84,7 @@ async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Re
             let client_type = &client.get_type().await;
             if conn.buffer.is_empty() {
                 server.client_collections.evict_client(client_type, evict_fd).await;
-                return Err("connection closed".into());
+                return Ok(Status::Closed);
             } else {
                 server.client_collections.evict_client(client_type, evict_fd).await;
                 return Err("connection reset by peer".into());
@@ -94,7 +106,7 @@ async fn handle_socket_io_client(client: Arc<Client>, server: Arc<Server>) -> Re
         },
         _ => {}
     }
-    Ok(())
+    Ok(Status::Looping)
 }
 
 async fn handle_socket_io_primary_probe(client: Arc<Client>, server: Arc<Server>) -> Result<()> {

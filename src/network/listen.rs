@@ -3,6 +3,12 @@ use crate::data::Server;
 use crate::data::{ Client, ClientType };
 use crate::network::socket_io;
 
+
+use crate::benchmark::data::Params;
+use crate::benchmark::network::socket_io::start_benchmark;
+use structopt::StructOpt;
+
+
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tracing::error;
@@ -15,30 +21,37 @@ pub async fn listen(server: Server) -> Result<()> {
         let server_config = server.server_config.read();
         (server_config.port, server_config.input_buffer_size)
     };
+
     let listener = TcpListener::bind(&format!("127.0.0.1:{}", port)).await?;
     println!("Listening to port: {}", port);
-    loop {
-        match listener.accept().await {
-            Ok((stream, _)) => {
-                /* The server struct only contains an Arc counter for the real contents.
-                 * So the clone only creates a new Arc counter.
-                 * 
-                 * Client is created at connection being accepted. At this moment we don't know
-                 * whether the client is a customer client or replication client. So we default it
-                 * to be customer. */
-                let client = Arc::new(Client::new(ClientType::Customer,
-                                      stream,
-                                      input_buffer_size));
-                let server = Arc::new(server.clone());
-                tokio::spawn(async move {
-                    if let Err(err) = socket_io::handle_client(client, server).await {
-                        error!(cause = ?err, "client handling error")
-                    }
-                });
-            },
-            Err(err) => {
-                return Err(err.into());
-            },
+    tokio::spawn(
+        async move {
+            loop {
+                match listener.accept().await {
+                    Ok((stream, _)) => {
+                        /* The server struct only contains an Arc counter for the real contents.
+                         * So the clone only creates a new Arc counter.
+                         * 
+                         * Client is created at connection being accepted. At this moment we don't know
+                         * whether the client is a customer client or replication client. So we default it
+                         * to be customer. */
+                        let client = Arc::new(Client::new(ClientType::Customer,
+                                              stream,
+                                              input_buffer_size));
+                        let server = Arc::new(server.clone());
+                        tokio::spawn(async move {
+                            if let Err(err) = socket_io::handle_client(client, server).await {
+                                error!(cause = ?err, "client handling error")
+                            }
+                        });
+                    },
+                    Err(err) => {
+                    },
+                }
+            }
         }
-    }
+    );
+    let params = Params::from_args();
+    start_benchmark(params).await?;
+    Ok(())
 }
